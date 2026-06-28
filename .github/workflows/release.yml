@@ -1,0 +1,117 @@
+name: Build and Release Alien Launcher
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.1)'
+        required: true
+      changelog:
+        description: 'Changelog / Release Notes'
+        required: true
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Run prepare_release.py (Workflow Dispatch Only)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          CHANGELOG="${{ github.event.inputs.changelog }}"
+          
+          # Run the prepare_release helper script to update version and generate update.json
+          python scripts/prepare_release.py "$VERSION" "$CHANGELOG"
+          
+          # Clean version string (remove leading v if present)
+          CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//')
+          
+          # Configure Git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit and Push
+          git add core/update_manager.py update.json
+          git commit -m "Release v${CLEAN_VERSION}"
+          git tag "v${CLEAN_VERSION}"
+          
+          # Push changes and tag
+          git push origin main
+          git push origin "v${CLEAN_VERSION}" --force
+
+      - name: Determine Version and Changelog
+        shell: bash
+        id: prep
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            # Remove leading v for consistency
+            VERSION=$(echo "$VERSION" | sed 's/^v//')
+            
+            # Read changelog from the newly generated update.json
+            CHANGELOG=$(python -c "import json; print(json.load(open('update.json', encoding='utf-8')).get('changelog', ''))")
+          else
+            # Extract tag name
+            TAG="${{ github.ref_name }}"
+            VERSION=$(echo "$TAG" | sed 's/^v//')
+            
+            # Read changelog from update.json if it exists, otherwise use fallback
+            if [ -f "update.json" ]; then
+              CHANGELOG=$(python -c "import json; print(json.load(open('update.json', encoding='utf-8')).get('changelog', ''))")
+            else
+              CHANGELOG="Release v${VERSION}"
+            fi
+          fi
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG=v$VERSION" >> $GITHUB_ENV
+          
+          # Save changelog to a temp file for the release creation
+          echo "$CHANGELOG" > release_notes.txt
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller "Alien Launcher.spec" --clean -y
+
+      - name: Prepare Release Asset
+        shell: bash
+        run: |
+          # Rename the output executable to avoid spaces in the release URL
+          mv "dist/Alien Launcher.exe" "dist/Alien.Launcher.exe"
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Alien Launcher v${{ env.VERSION }}
+          body_path: release_notes.txt
+          files: dist/Alien.Launcher.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,7 +13,7 @@ class UpdateManager:
         self.current_version = LAUNCHER_VERSION
 
     def get_update_url(self):
-        default_url = "https://raw.githubusercontent.com/user/alien-launcher/main/update.json"
+        default_url = "https://raw.githubusercontent.com/GianCarlozxc/AlienLauncher/main/update.json"
         return self.config_manager.get("update_url", default_url)
 
     def check_for_updates(self):
