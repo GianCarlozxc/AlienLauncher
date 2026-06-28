@@ -1,0 +1,35 @@
+{
+    "username": "GianCarlo123",
+    "account_type": "Ely.by",
+    "selected_version": "26.1.2",
+    "ram_min": "2G",
+    "ram_max": "4G",
+    "minecraft_folder": "C:\\Users\\Administrator\\AppData\\Roaming\\.giancraft",
+    "java_path": "",
+    "theme": "dark",
+    "tailscale_ip": "100.127.109.98",
+    "local_server_path": "C:\\Users\\Administrator\\AppData\\Roaming\\.giancraft\\servers\\fabric_26_1_2",
+    "microsoft_data": {},
+    "curseforge_api_key": "$2a$10$qxE0o64lk7rAqkdtkn3X0..QmBPmkioJpE1CJVgo9CmqTDBly0MIi",
+    "installed_mods": {
+        "gvQqBUqZ": {
+            "filename": "lithium-fabric-0.24.6+mc26.1.2.jar",
+            "title": "Lithium",
+            "project_type": "mod"
+        }
+    },
+    "loader_type": "Fabric",
+    "friends": [],
+    "elyby_data": {
+        "username": "GianCarlo123",
+        "uuid": "ae393da0a90245ea94a38ce7d649d379",
+        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpYXQiOjE3ODI2MjQ2NzQsInN1YiI6ImVseXw4NTYxNTExIiwiZXhwIjoxNzgyNzk3NDc0LCJzY29wZSI6Im9idGFpbl9vd25fYWNjb3VudF9pbmZvIG1pbmVjcmFmdF9zZXJ2ZXJfc2Vzc2lvbiIsImVseS1jbGllbnQtdG9rZW4iOiJiRkJHbWcxeGw2V3RiZWhQYTl4RnN3UUdCYllPS3J6VVoxN3pwUkp6Uk8xbGF2V2FBSXVqR25SS0U0THpGZFdZeVFNalcwQ0tPcEdzVk1jRzVoWnNiSUhVS0RSWElLUFBoYWFFNkEifQ._lmeA19VqygMe-_XP9tiUAd0-v1GyvlPfbWMhcJneJ7cjwHT8BcRC8B0WtjvcTpkvmn4O2XgO07oghZWxBqyRA",
+        "client_token": "46d72e8e-c81d-488d-adf6-4711b13e023e"
+    },
+    "equipped_skin": {
+        "id": 2049021,
+        "skin_url": "https://ely.by/storage/skins/1c4d485bd73be3b13c8b36cf05206cde.png",
+        "is_slim": false
+    },
+    "launcher_style": "unicorn"
+}
