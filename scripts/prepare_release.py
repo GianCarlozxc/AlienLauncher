@@ -61,12 +61,17 @@ def generate_update_json(clean_version, changelog):
     print(f"Generated update.json for version {clean_version}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python prepare_release.py <version> <changelog>")
-        sys.exit(1)
-        
-    version_arg = sys.argv[1]
-    changelog_arg = " ".join(sys.argv[2:])
+    # Prioritize environment variables (useful for GitHub Actions to avoid shell escaping issues)
+    version_arg = os.environ.get("RELEASE_VERSION")
+    changelog_arg = os.environ.get("RELEASE_CHANGELOG")
+    
+    if not version_arg or changelog_arg is None:
+        if len(sys.argv) < 3:
+            print("Usage: python prepare_release.py <version> <changelog>")
+            print("Alternative: Set RELEASE_VERSION and RELEASE_CHANGELOG environment variables.")
+            sys.exit(1)
+        version_arg = sys.argv[1]
+        changelog_arg = " ".join(sys.argv[2:])
     
     clean_ver = update_version(version_arg)
     generate_update_json(clean_ver, changelog_arg)

@@ -24,6 +24,13 @@ def check_git_status():
     branch = run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
     print(f"Current Git branch: {branch}")
     
+    # Check remote URL
+    remote_url = run_git_command(["remote", "get-url", "origin"], check=False)
+    if not remote_url:
+        print("Error: No remote named 'origin' is configured.")
+        sys.exit(1)
+    print(f"Remote origin URL: {remote_url}")
+
     # Check if working directory is clean
     status = run_git_command(["status", "--porcelain"])
     if status:
@@ -33,13 +40,18 @@ def check_git_status():
         if confirm != 'y':
             print("Aborted.")
             sys.exit(0)
-            
-    # Check remote URL
-    remote_url = run_git_command(["remote", "get-url", "origin"], check=False)
-    if not remote_url:
-        print("Error: No remote named 'origin' is configured.")
-        sys.exit(1)
-    print(f"Remote origin URL: {remote_url}")
+        print("\nProceeding. Note: If uncommitted changes conflict with remote changes, git pull might fail.")
+        
+    # Sync with remote before releasing to prevent rejected pushes
+    print("\nSyncing with remote repository (fetching latest changes)...")
+    pull_result = subprocess.run(["git", "pull", "--rebase", "origin", branch], capture_output=True, text=True)
+    if pull_result.returncode != 0:
+        print(f"\nWarning: Could not automatically pull from remote origin/{branch}.")
+        print(f"Details: {pull_result.stderr.strip()}")
+        print("Continuing anyway. You may face issues when pushing if your local branch is out of sync.")
+    else:
+        print("Repository successfully synced with remote.")
+        
     return branch
 
 def get_input(prompt, validator=None):

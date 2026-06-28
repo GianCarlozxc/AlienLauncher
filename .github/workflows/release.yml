@@ -40,29 +40,38 @@ jobs:
 
       - name: Run prepare_release.py (Workflow Dispatch Only)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.version }}
+          RELEASE_CHANGELOG: ${{ github.event.inputs.changelog }}
         shell: bash
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          CHANGELOG="${{ github.event.inputs.changelog }}"
-          
           # Run the prepare_release helper script to update version and generate update.json
-          python scripts/prepare_release.py "$VERSION" "$CHANGELOG"
+          python scripts/prepare_release.py
           
           # Clean version string (remove leading v if present)
-          CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//')
+          CLEAN_VERSION=$(echo "$RELEASE_VERSION" | sed 's/^v//')
           
           # Configure Git
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Commit and Push
+          # Stage changes
           git add core/update_manager.py update.json
-          git commit -m "Release v${CLEAN_VERSION}"
-          git tag "v${CLEAN_VERSION}"
           
-          # Push changes and tag
-          git push origin main
-          git push origin "v${CLEAN_VERSION}" --force
+          # Commit and Push only if there are changes
+          if ! git diff --cached --quiet; then
+            git commit -m "Release v${CLEAN_VERSION}"
+            git tag "v${CLEAN_VERSION}" --force
+            
+            # Push changes to main (fail gracefully in case of branch protection)
+            git push origin main || echo "Warning: Failed to push to main branch (it might be protected). Pushing tag anyway..."
+            git push origin "v${CLEAN_VERSION}" --force
+          else
+            echo "No file changes detected, skipping git commit."
+            # Ensure tag is created and pushed anyway
+            git tag "v${CLEAN_VERSION}" --force
+            git push origin "v${CLEAN_VERSION}" --force
+          fi
 
       - name: Determine Version and Changelog
         shell: bash
