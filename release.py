@@ -142,7 +142,13 @@ def main():
     # Commit changes
     print("\nCommitting changes...")
     run_git_command(["add", "core/update_manager.py", "update.json"])
-    run_git_command(["commit", "-m", f"Release v{clean_version}"])
+    
+    # Check if there are changes to commit
+    staged_diff = run_git_command(["diff", "--cached", "--name-only"], check=False)
+    if staged_diff:
+        run_git_command(["commit", "-m", f"Release v{clean_version}"])
+    else:
+        print("No changes detected in files, skipping git commit.")
     
     # Tag release
     tag_name = f"v{clean_version}"
