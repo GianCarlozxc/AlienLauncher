@@ -590,7 +590,7 @@ class SettingsPage(ctk.CTkFrame):
         lbl_enable_update_desc = ctk.CTkLabel(row_frame_9a, text="Allow checking for launcher updates manually.", font=ctk.CTkFont(size=11), text_color=TEXT_MUTED)
         lbl_enable_update_desc.grid(row=1, column=0, sticky="w")
         
-        self.enable_update_check_var = tk.BooleanVar(value=self.config_manager.get("enable_update_check", True))
+        self.enable_update_check_var = tk.BooleanVar(value=self.config_manager.get("enable_update_check", False))
         self.enable_update_check_switch = ctk.CTkSwitch(
             row_frame_9a,
             text="",
@@ -681,7 +681,7 @@ class SettingsPage(ctk.CTkFrame):
         self.launcher_style_var.set("Unicorn Launcher" if saved_style == "unicorn" else "Alien Launcher")
         
         # Load Update Check setting
-        enabled = self.config_manager.get("enable_update_check", True)
+        enabled = self.config_manager.get("enable_update_check", False)
         self.enable_update_check_var.set(enabled)
         self.toggle_update_check_visibility()
 

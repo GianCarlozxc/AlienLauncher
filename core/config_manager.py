@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     "theme": "dark",
     "tailscale_ip": "",
     "local_server_path": "",
-    "enable_update_check": True,
+    "enable_update_check": False,
     "microsoft_data": {}
 }
 
