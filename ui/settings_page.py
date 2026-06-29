@@ -1042,16 +1042,10 @@ class SettingsPage(ctk.CTkFrame):
             def _gui_finish():
                 self.update_progress_bar.grid_remove()
                 if success:
-                    import sys
-                    if getattr(sys, 'frozen', False):
-                        import os
-                        messagebox.showinfo("Updating Launcher", "Update downloaded successfully!\n\nThe launcher will now close and apply the update.")
-                        os._exit(0)
-                    else:
-                        self.update_manager.current_version = version
-                        self.lbl_update_version.configure(text=f"Current version: v{version} (Latest)", text_color=TEXT_MUTED)
-                        self.btn_check_update.configure(state="normal", text="Check for Updates")
-                        messagebox.showinfo("Update Complete", f"Launcher source code has been updated to v{version} successfully! UI refreshed.")
+                    self.update_manager.current_version = version
+                    self.lbl_update_version.configure(text=f"Current version: v{version} (Latest)", text_color=TEXT_MUTED)
+                    self.btn_check_update.configure(state="normal", text="Check for Updates")
+                    messagebox.showinfo("Update Complete", f"Launcher has been updated to v{version} successfully! UI refreshed.")
                 else:
                     self.btn_check_update.configure(state="normal", text="Check for Updates")
                     self.lbl_update_version.configure(text="Update failed", text_color="#E74C3C")

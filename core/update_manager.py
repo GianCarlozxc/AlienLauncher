@@ -108,7 +108,7 @@ class UpdateManager:
                 os.remove(zip_temp_path)
                 return True, "Source code updated successfully!"
 
-            # Frozen/EXE update flow
+            # Frozen/EXE update flow (Rename-and-swap)
             current_exe_path = sys.executable
             temp_dir = os.environ.get("TEMP", os.path.expanduser("~"))
             new_exe_temp_path = os.path.join(temp_dir, "Alien_Launcher_New.exe")
@@ -125,7 +125,7 @@ class UpdateManager:
                 shutil.copy2(download_url, new_exe_temp_path)
             else:
                 headers = {"User-Agent": "Alien-Launcher-Updater/1.0.0"}
-                res = requests.get(download_url, stream=True, headers=headers, timeout=60)
+                res = requests.get(download_url, stream=True, headers=headers, timeout=60, verify=False)
                 res.raise_for_status()
                 
                 total_size = int(res.headers.get('content-length', 0))
@@ -139,42 +139,21 @@ class UpdateManager:
                             if progress_callback and total_size > 0:
                                 progress_callback(downloaded, total_size)
 
-            # 3. Create update.bat
-            bat_path = os.path.join(temp_dir, "apply_update.bat")
-            bat_content = f"""@echo off
-title Updating Alien Launcher...
-echo Waiting for Alien Launcher to close...
-set /a retry_count=0
+            # Apply rename-and-swap
+            old_exe_path = current_exe_path + ".old"
+            if os.path.exists(old_exe_path):
+                try:
+                    os.remove(old_exe_path)
+                except Exception:
+                    pass
 
-:wait_loop
-copy /y "{new_exe_temp_path}" "{current_exe_path}" >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    set /a retry_count+=1
-    if %retry_count% gtr 15 (
-        exit /b 1
-    )
-    ping 127.0.0.1 -n 2 >nul
-    goto wait_loop
-)
-
-echo Restarting launcher...
-start "" "{current_exe_path}"
-
-echo Cleaning up...
-del "{new_exe_temp_path}"
-(goto) 2>nul & del "%~f0"
-"""
-            with open(bat_path, "w", encoding="ansi") as f:
-                f.write(bat_content)
-
-            # 4. Launch the batch script detached
-            if sys.platform == "win32":
-                # We use creationflags to run completely in background without cmd window popup
-                subprocess.Popen(
-                    ["cmd.exe", "/c", bat_path],
-                    creationflags=0x08000000 | 0x00000008 # CREATE_NO_WINDOW | DETACHED_PROCESS
-                )
-                
-            return True, "Restarting to apply update..."
+            # Rename the running executable to release the file lock
+            os.rename(current_exe_path, old_exe_path)
+            
+            # Copy new executable to original path
+            import shutil
+            shutil.move(new_exe_temp_path, current_exe_path)
+            
+            return True, "Executable updated in-place successfully!"
         except Exception as e:
             return False, str(e)
