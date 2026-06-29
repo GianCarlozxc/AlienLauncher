@@ -432,7 +432,6 @@ class MinecraftManager:
                 client_id_val = "elyby"
                 
                 # Setup authlib-injector JavaAgent to redirect session calls to Ely.by
-                import sys
                 if getattr(sys, 'frozen', False):
                     injector_dir = os.path.join(os.path.dirname(sys.executable), "assets")
                 else:
