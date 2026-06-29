@@ -578,9 +578,31 @@ class SettingsPage(ctk.CTkFrame):
         card_title_4 = ctk.CTkLabel(update_card, text="Launcher Updates", font=ctk.CTkFont(weight="bold", size=14))
         card_title_4.grid(row=0, column=0, columnspan=2, padx=15, pady=(12, 10), sticky="w")
 
-        # Row 1: Check and Update controls
+        # Row 1: Enable Update Checks Switch
+        import tkinter as tk
+        row_frame_9a = ctk.CTkFrame(update_card, fg_color="transparent")
+        row_frame_9a.grid(row=1, column=0, columnspan=2, padx=15, pady=5, sticky="ew")
+        row_frame_9a.grid_columnconfigure(0, weight=1)
+        row_frame_9a.grid_columnconfigure(1, weight=0)
+        
+        lbl_enable_update_title = ctk.CTkLabel(row_frame_9a, text="Enable Update Checks", font=ctk.CTkFont(size=13, weight="bold"))
+        lbl_enable_update_title.grid(row=0, column=0, sticky="w")
+        lbl_enable_update_desc = ctk.CTkLabel(row_frame_9a, text="Allow checking for launcher updates manually.", font=ctk.CTkFont(size=11), text_color=TEXT_MUTED)
+        lbl_enable_update_desc.grid(row=1, column=0, sticky="w")
+        
+        self.enable_update_check_var = tk.BooleanVar(value=self.config_manager.get("enable_update_check", True))
+        self.enable_update_check_switch = ctk.CTkSwitch(
+            row_frame_9a,
+            text="",
+            variable=self.enable_update_check_var,
+            progress_color=ACCENT,
+            command=self.toggle_update_check_visibility
+        )
+        self.enable_update_check_switch.grid(row=0, column=1, rowspan=2, sticky="e", padx=(10, 0))
+
+        # Row 2: Check and Update controls
         row_frame_9 = ctk.CTkFrame(update_card, fg_color="transparent")
-        row_frame_9.grid(row=1, column=0, columnspan=2, padx=15, pady=10, sticky="ew")
+        row_frame_9.grid(row=2, column=0, columnspan=2, padx=15, pady=10, sticky="ew")
         row_frame_9.grid_columnconfigure(0, weight=1)
         row_frame_9.grid_columnconfigure(1, weight=0)
 
@@ -658,6 +680,11 @@ class SettingsPage(ctk.CTkFrame):
         saved_style = self.config_manager.get("launcher_style", "alien")
         self.launcher_style_var.set("Unicorn Launcher" if saved_style == "unicorn" else "Alien Launcher")
         
+        # Load Update Check setting
+        enabled = self.config_manager.get("enable_update_check", True)
+        self.enable_update_check_var.set(enabled)
+        self.toggle_update_check_visibility()
+
         self.update_button_labels()
 
     def on_account_type_change(self, value):
@@ -850,6 +877,7 @@ class SettingsPage(ctk.CTkFrame):
         self.config_manager.set("ram_max", ram_max)
         self.config_manager.set("theme", theme)
         self.config_manager.set("launcher_style", launcher_style)
+        self.config_manager.set("enable_update_check", self.enable_update_check_var.get())
 
         self.update_gamer_id_label(username)
 
@@ -964,6 +992,10 @@ class SettingsPage(ctk.CTkFrame):
         self.style_btn.configure(text=f"{self.launcher_style_var.get()}  ▼")
 
     def check_for_updates(self):
+        if not self.enable_update_check_var.get():
+            messagebox.showwarning("Updates Disabled", "Update checking is disabled in settings.")
+            return
+
         self.btn_check_update.configure(state="disabled", text="Checking...")
         self.lbl_update_version.configure(text="Checking for updates on server...", text_color=TEXT_MUTED)
 
@@ -1021,3 +1053,12 @@ class SettingsPage(ctk.CTkFrame):
             self.run_in_gui(_gui_finish)
 
         threading.Thread(target=_thread, daemon=True).start()
+
+    def toggle_update_check_visibility(self):
+        enabled = self.enable_update_check_var.get()
+        if enabled:
+            self.btn_check_update.configure(state="normal")
+            self.lbl_update_version.configure(text=f"Current version: v{self.update_manager.current_version}", text_color=TEXT_MUTED)
+        else:
+            self.btn_check_update.configure(state="disabled")
+            self.lbl_update_version.configure(text="Update checks are disabled by configuration.", text_color=TEXT_MUTED)
