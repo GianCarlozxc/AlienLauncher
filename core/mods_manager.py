@@ -46,12 +46,12 @@ class ModsManager:
         except Exception as e:
             return False, f"Connection error: {e}"
 
-    def search_curseforge(self, query, offset=0, limit=10):
+    def search_curseforge(self, query, class_id=6, offset=0, limit=10):
         api_key = self.get_cf_api_key()
         url = f"{self.cf_base_url}/mods/search"
         params = {
             "gameId": 432,
-            "classId": 6,
+            "classId": class_id,
             "searchFilter": query,
             "sortField": 1,
             "sortOrder": "desc",
@@ -90,10 +90,14 @@ class ModsManager:
     def get_content_directory(self, project_type="mod"):
         folder_map = {
             "mod": "mods",
+            "bukkit_plugin": "plugins",
+            "world": "saves",
             "resourcepack": "resourcepacks",
+            "customization": "customization",
             "datapack": "datapacks",
-            "shader": "shaderpacks",
-            "modpack": "modpacks"
+            "addon": "addons",
+            "modpack": "modpacks",
+            "shader": "shaderpacks"
         }
         folder_name = folder_map.get(project_type, "mods")
         return os.path.join(self.config_manager.get_minecraft_folder(), folder_name)

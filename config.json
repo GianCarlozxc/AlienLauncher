@@ -11,13 +11,7 @@
     "local_server_path": "C:\\Users\\Administrator\\AppData\\Roaming\\.giancraft\\servers\\fabric_26_1_2",
     "microsoft_data": {},
     "curseforge_api_key": "$2a$10$.iQoyiZ3z5cRwKMtIVm39O.zEsmrBO0JDVentIncpttrd5MKz0XZy",
-    "installed_mods": {
-        "gvQqBUqZ": {
-            "filename": "lithium-fabric-0.24.6+mc26.1.2.jar",
-            "title": "Lithium",
-            "project_type": "mod"
-        }
-    },
+    "installed_mods": {},
     "loader_type": "Fabric",
     "friends": [],
     "elyby_data": {
@@ -31,5 +25,6 @@
         "skin_url": "https://ely.by/storage/skins/1c4d485bd73be3b13c8b36cf05206cde.png",
         "is_slim": false
     },
-    "launcher_style": "unicorn"
+    "launcher_style": "unicorn",
+    "enable_update_check": false
 }

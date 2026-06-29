@@ -16,12 +16,40 @@ class ModsPage(ctk.CTkFrame):
         "Modpacks": "modpack"
     }
 
+    CURSEFORGE_CONTENT_TYPES = {
+        "Mods": "mod",
+        "Bukkit Plugins": "bukkit_plugin",
+        "Worlds": "world",
+        "Resource Packs": "resourcepack",
+        "Customization": "customization",
+        "Data Packs": "datapack",
+        "Addons": "addon",
+        "Modpacks": "modpack",
+        "Shaders": "shader"
+    }
+
+    CURSEFORGE_CLASS_IDS = {
+        "mod": 6,
+        "bukkit_plugin": 5,
+        "world": 17,
+        "resourcepack": 12,
+        "customization": 4546,
+        "datapack": 6945,
+        "addon": 4559,
+        "modpack": 4471,
+        "shader": 6552
+    }
+
     CONTENT_LABELS = {
         "mod": "Mods",
+        "bukkit_plugin": "Bukkit Plugins",
+        "world": "Worlds",
         "resourcepack": "Resource Packs",
+        "customization": "Customization",
         "datapack": "Data Packs",
-        "shader": "Shaders",
-        "modpack": "Modpacks"
+        "addon": "Addons",
+        "modpack": "Modpacks",
+        "shader": "Shaders"
     }
 
     def __init__(self, parent, mods_manager, config_manager):
@@ -213,12 +241,12 @@ class ModsPage(ctk.CTkFrame):
     def on_source_changed(self, value):
         if value == "CurseForge":
             self.search_entry.configure(placeholder_text="Search CurseForge mods...")
-            self.content_type_selector.configure(state="disabled")
+            self.content_type_selector.configure(values=list(self.CURSEFORGE_CONTENT_TYPES.keys()))
             self.content_type_var.set("Mods")
         else:
-            self.content_type_selector.configure(state="normal")
-            self.update_content_placeholder()
-        
+            self.content_type_selector.configure(values=list(self.MODRINTH_CONTENT_TYPES.keys()))
+            self.content_type_var.set("Mods")
+        self.update_content_placeholder()
         self.refresh_installed_mods()
         self.start_search_thread(reset_offset=True)
 
@@ -228,9 +256,11 @@ class ModsPage(ctk.CTkFrame):
         self.start_search_thread(reset_offset=True)
 
     def get_selected_project_type(self):
-        if self.source_var.get() == "CurseForge":
-            return "mod"
-        return self.MODRINTH_CONTENT_TYPES.get(self.content_type_var.get(), "mod")
+        source = self.source_var.get()
+        category = self.content_type_var.get()
+        if source == "CurseForge":
+            return self.CURSEFORGE_CONTENT_TYPES.get(category, "mod")
+        return self.MODRINTH_CONTENT_TYPES.get(category, "mod")
 
     def get_content_label(self, project_type=None):
         project_type = project_type or self.get_selected_project_type()
@@ -240,10 +270,14 @@ class ModsPage(ctk.CTkFrame):
         project_type = self.get_selected_project_type()
         examples = {
             "mod": "Search mods (e.g. Fabric API, Sodium, JEI)...",
+            "bukkit_plugin": "Search Bukkit plugins...",
+            "world": "Search worlds/saves...",
             "resourcepack": "Search resource packs (e.g. Faithful, Fresh Animations)...",
+            "customization": "Search customizations...",
             "datapack": "Search data packs (e.g. Terralith, Incendium)...",
-            "shader": "Search shaders (e.g. Complementary, BSL)...",
-            "modpack": "Search modpacks (e.g. Fabulously Optimized)..."
+            "addon": "Search addons...",
+            "modpack": "Search modpacks (e.g. Fabulously Optimized)...",
+            "shader": "Search shaders (e.g. Complementary, BSL)..."
         }
         self.search_entry.configure(placeholder_text=examples.get(project_type, examples["mod"]))
 
@@ -282,7 +316,8 @@ class ModsPage(ctk.CTkFrame):
         source = self.source_var.get()
         project_type = self.get_selected_project_type()
         if source == "CurseForge":
-            success, raw_hits = self.mods_manager.search_curseforge(query, offset=self.current_offset, limit=self.limit)
+            class_id = self.CURSEFORGE_CLASS_IDS.get(project_type, 6)
+            success, raw_hits = self.mods_manager.search_curseforge(query, class_id=class_id, offset=self.current_offset, limit=self.limit)
             if success:
                 # Map CurseForge to common Modrinth schema
                 hits = []
@@ -301,7 +336,7 @@ class ModsPage(ctk.CTkFrame):
                         "downloads": cf_hit.get("downloadCount", 0),
                         "categories": cats,
                         "icon_url": logo.get("url", ""),
-                        "project_type": "mod",
+                        "project_type": project_type,
                         "is_curseforge": True,
                         "cf_raw_hit": cf_hit
                     })
