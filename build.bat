@@ -38,7 +38,7 @@ echo Starting compilation with PyInstaller...
 echo This may take a minute...
 echo.
 
-pyinstaller "Alien Launcher.spec" --clean -y
+python -m PyInstaller "Alien Launcher.spec" --clean -y
 
 if %errorlevel% neq 0 (
     echo.
