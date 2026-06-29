@@ -5,9 +5,9 @@ import customtkinter as ctk
 from tkinter import filedialog
 import ui.custom_dialog as messagebox
 from ui.theme import (
-    ACCENT, ACCENT_HOVER, ACCENT_TEXT, BORDER, BORDER_DARK, CARD_BORDER,
+    ACCENT, ACCENT_HOVER, ACCENT_TEXT, APP_BG, BORDER, BORDER_DARK, CARD_BORDER,
     CONTROL_BG, CONTROL_HOVER, SECONDARY_BUTTON, SECONDARY_HOVER, SIDEBAR_BG,
-    SURFACE, SURFACE_ALT, SURFACE_HOVER, TEXT_DISABLED, TEXT_MUTED,
+    SUCCESS_COLOR, SURFACE, SURFACE_ALT, SURFACE_HOVER, TEXT_DISABLED, TEXT_MUTED,
     TEXT_PRIMARY, TEXT_SECONDARY, normalize_structural_colors
 )
 
@@ -902,19 +902,60 @@ class SettingsPage(ctk.CTkFrame):
         dialog.title(title)
         dialog.geometry("320x400")
         dialog.resizable(False, False)
+        dialog.overrideredirect(True) # Make borderless/non-movable
         dialog.transient(self)
         dialog.grab_set()
         
-        # Center on launcher
-        x = self.winfo_x() + (self.winfo_width() // 2) - 160
-        y = self.winfo_y() + (self.winfo_height() // 2) - 200
+        # Position near the mouse cursor where clicked
+        mx, my = self.winfo_pointerxy()
+        x = max(0, min(mx - 160, self.winfo_screenwidth() - 320))
+        y = max(0, min(my - 200, self.winfo_screenheight() - 400))
         dialog.geometry(f"+{x}+{y}")
+
+        # Calculate offset relative to top-level parent window and bind synchronization
+        toplevel = self.winfo_toplevel()
+        px, py = toplevel.winfo_x(), toplevel.winfo_y()
+        offset_x = x - px
+        offset_y = y - py
+
+        def sync_position(event):
+            if event.widget == toplevel and dialog.winfo_exists():
+                dialog.geometry(f"+{toplevel.winfo_x() + offset_x}+{toplevel.winfo_y() + offset_y}")
+
+        bind_id = toplevel.bind("<Configure>", sync_position, add="+")
+        
+        def on_destroy_settings(event):
+            if event.widget == dialog:
+                try:
+                    toplevel.unbind("<Configure>", bind_id)
+                except Exception:
+                    pass
+        dialog.bind("<Destroy>", on_destroy_settings)
+
+        # Main frame wrapper with border
+        main_frame = ctk.CTkFrame(
+            dialog,
+            fg_color=APP_BG,
+            border_width=2,
+            border_color=BORDER,
+            corner_radius=12
+        )
+        main_frame.pack(fill="both", expand=True)
+
+        # Header Title Label
+        header_lbl = ctk.CTkLabel(
+            main_frame,
+            text=title.upper(),
+            font=ctk.CTkFont(family="Orbitron", size=12, weight="bold"),
+            text_color=SUCCESS_COLOR
+        )
+        header_lbl.pack(pady=(15, 5))
         
         # Search Entry for long lists
-        search_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        search_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         search_entry = None
         if len(values) > 5:
-            search_frame.pack(fill="x", padx=15, pady=(15, 10))
+            search_frame.pack(fill="x", padx=15, pady=(5, 10))
             search_var = ctk.StringVar()
             search_entry = ctk.CTkEntry(
                 search_frame, 
@@ -926,8 +967,21 @@ class SettingsPage(ctk.CTkFrame):
             )
             search_entry.pack(fill="x")
             
-        scroll_frame = ctk.CTkScrollableFrame(dialog, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK)
-        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(15 if len(values) <= 5 else 0, 15))
+        scroll_frame = ctk.CTkScrollableFrame(main_frame, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK)
+        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(10 if len(values) <= 5 else 0, 10))
+
+        # Cancel Button
+        btn_cancel = ctk.CTkButton(
+            main_frame,
+            text="CANCEL",
+            height=32,
+            fg_color=SECONDARY_BUTTON,
+            hover_color=SECONDARY_HOVER,
+            text_color=TEXT_PRIMARY,
+            font=ctk.CTkFont(family="Orbitron", size=11, weight="bold"),
+            command=dialog.destroy
+        )
+        btn_cancel.pack(fill="x", padx=15, pady=(0, 15))
         
         buttons = []
         

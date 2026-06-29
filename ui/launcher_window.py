@@ -2,7 +2,7 @@ import os
 import threading
 import queue
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 import ui.custom_dialog as messagebox
 
 # Import core managers
@@ -24,7 +24,7 @@ from ui.skin_page import SkinPage
 import ui.theme
 from ui.theme import (
     APP_BG, BORDER, BORDER_DARK,
-    CARD_BORDER, CONTROL_BG, CONTROL_HOVER, SECONDARY_BUTTON,
+    CARD_BORDER, CONTROL_BG, CONTROL_HOVER, SECONDARY_BUTTON, SECONDARY_HOVER,
     SIDEBAR_BG, SURFACE_ALT, SURFACE_HOVER, TEXT_MUTED, TEXT_PRIMARY,
     TEXT_SECONDARY, SUCCESS_COLOR, normalize_structural_colors
 )
@@ -110,6 +110,18 @@ class LauncherWindow(ctk.CTk):
         self.gui_queue = queue.Queue()
         self._gui_queue_after_id = None
         self.check_gui_queue()
+
+        # Navigation icons configuration
+        self.nav_icon_paths = {
+            "Home": "icon_home.png",
+            "Tailscale": "icon_vpn.png",
+            "Server": "icon_server.png",
+            "Mods": "icon_mods.png",
+            "Friends": "icon_friends.png",
+            "Skin": "icon_skin.png",
+            "Settings": "icon_settings.png"
+        }
+        self.nav_icon_images = {}
 
         # Attempt to refresh Microsoft session if active
         if self.config_manager.get("account_type") == "Microsoft":
@@ -211,6 +223,122 @@ class LauncherWindow(ctk.CTk):
             if hasattr(self, "credit_label"):
                 self.credit_label.configure(text=f"Alien Launcher v{LAUNCHER_VERSION}")
 
+        # 4. Load & Update Navigation Icons
+        self.load_nav_icons()
+        if hasattr(self, "nav_buttons"):
+            for name, btn in self.nav_buttons.items():
+                if name in self.nav_icon_images:
+                    btn.configure(image=self.nav_icon_images[name])
+
+    def tint_image(self, image, color_hex):
+        try:
+            hex_val = color_hex.lstrip('#')
+            r, g, b = tuple(int(hex_val[i:i+2], 16) for i in (0, 2, 4))
+            r_chan, g_chan, b_chan, a_chan = image.split()
+            new_r = r_chan.point(lambda _: r)
+            new_g = g_chan.point(lambda _: g)
+            new_b = b_chan.point(lambda _: b)
+            return Image.merge("RGBA", (new_r, new_g, new_b, a_chan))
+        except Exception as e:
+            print(f"Error tinting image: {e}")
+            return image
+
+    def generate_default_icon_masks(self):
+        from ui.theme import get_asset_path
+        size = (64, 64)
+        
+        def draw_home(draw):
+            draw.polygon([(32, 10), (10, 32), (54, 32)], fill=(255, 255, 255, 255))
+            draw.rectangle([18, 32, 46, 54], fill=(255, 255, 255, 255))
+            draw.rectangle([27, 42, 37, 54], fill=(0, 0, 0, 0))
+            
+        def draw_vpn(draw):
+            draw.polygon([(32, 10), (52, 18), (52, 38), (32, 54), (12, 38), (12, 18)], fill=(255, 255, 255, 255))
+            draw.polygon([(32, 15), (47, 21), (47, 36), (32, 49), (17, 36), (17, 21)], fill=(0, 0, 0, 0))
+            draw.polygon([(32, 22), (40, 27), (40, 34), (32, 42), (24, 34), (24, 27)], fill=(255, 255, 255, 255))
+            
+        def draw_server(draw):
+            for y in [12, 28, 44]:
+                draw.rounded_rectangle([10, y, 54, y + 10], radius=3, fill=(255, 255, 255, 255))
+                draw.ellipse([15, y + 3.5, 18, y + 6.5], fill=(0, 0, 0, 0))
+                draw.ellipse([21, y + 3.5, 24, y + 6.5], fill=(0, 0, 0, 0))
+                
+        def draw_mods(draw):
+            draw.rounded_rectangle([12, 18, 52, 52], radius=4, fill=(255, 255, 255, 255))
+            draw.rectangle([12, 32, 52, 38], fill=(0, 0, 0, 0))
+            draw.rectangle([29, 18, 35, 52], fill=(0, 0, 0, 0))
+            
+        def draw_friends(draw):
+            draw.ellipse([20, 12, 36, 28], fill=(255, 255, 255, 255))
+            draw.chord([10, 32, 46, 60], start=180, end=360, fill=(255, 255, 255, 255))
+            draw.rectangle([42, 18, 50, 20], fill=(255, 255, 255, 255))
+            draw.rectangle([45, 15, 47, 23], fill=(255, 255, 255, 255))
+            
+        def draw_skin(draw):
+            points = [
+                (26, 18), (38, 18),
+                (48, 22), (56, 32), (48, 38), (44, 34),
+                (44, 52), (20, 52), (20, 34),
+                (16, 38), (8, 32), (16, 22)
+            ]
+            draw.polygon(points, fill=(255, 255, 255, 255))
+            draw.ellipse([26, 12, 38, 22], fill=(0, 0, 0, 0))
+            
+        def draw_settings(draw):
+            cx, cy = 32, 32
+            r_outer = 18
+            r_inner = 8
+            draw.ellipse([cx - r_outer, cy - r_outer, cx + r_outer, cy + r_outer], fill=(255, 255, 255, 255))
+            import math
+            for i in range(8):
+                angle = i * (2 * math.pi / 8)
+                tx = cx + 22 * math.cos(angle)
+                ty = cy + 22 * math.sin(angle)
+                draw.ellipse([tx - 4, ty - 4, tx + 4, ty + 4], fill=(255, 255, 255, 255))
+            draw.ellipse([cx - r_inner, cy - r_inner, cx + r_inner, cy + r_inner], fill=(0, 0, 0, 0))
+
+        draw_funcs = {
+            "icon_home.png": draw_home,
+            "icon_vpn.png": draw_vpn,
+            "icon_server.png": draw_server,
+            "icon_mods.png": draw_mods,
+            "icon_friends.png": draw_friends,
+            "icon_skin.png": draw_skin,
+            "icon_settings.png": draw_settings
+        }
+
+        for filename, draw_func in draw_funcs.items():
+            path = get_asset_path(f"assets/{filename}")
+            if not os.path.exists(path):
+                try:
+                    img = Image.new("RGBA", size, (0, 0, 0, 0))
+                    draw = ImageDraw.Draw(img)
+                    draw_func(draw)
+                    img.save(path)
+                except Exception as e:
+                    print(f"Error generating mask {filename}: {e}")
+
+    def load_nav_icons(self):
+        self.generate_default_icon_masks()
+        from ui.theme import get_asset_path, TEXT_SECONDARY, ACCENT
+        for name, filename in self.nav_icon_paths.items():
+            mask_path = get_asset_path(f"assets/{filename}")
+            if os.path.exists(mask_path):
+                try:
+                    mask_img = Image.open(mask_path).convert("RGBA")
+                    light_color = TEXT_SECONDARY[0]
+                    light_img = self.tint_image(mask_img, light_color)
+                    dark_color = ACCENT
+                    dark_img = self.tint_image(mask_img, dark_color)
+                    
+                    self.nav_icon_images[name] = ctk.CTkImage(
+                        light_image=light_img,
+                        dark_image=dark_img,
+                        size=(20, 20)
+                    )
+                except Exception as e:
+                    print(f"Error loading nav icon {name}: {e}")
+
 
     def setup_layout(self):
         # Master grid layout: 2 columns (sidebar, content)
@@ -259,6 +387,8 @@ class LauncherWindow(ctk.CTk):
             btn = ctk.CTkButton(
                 self.sidebar_frame,
                 text=label,
+                image=self.nav_icon_images.get(name),
+                compound="left",
                 height=40,
                 corner_radius=6,
                 fg_color="transparent",
@@ -681,17 +811,57 @@ class LauncherWindow(ctk.CTk):
         self.version_dialog.title("Select Version")
         self.version_dialog.geometry("300x450")
         self.version_dialog.resizable(False, False)
+        self.version_dialog.overrideredirect(True) # Make borderless/non-movable
         self.version_dialog.transient(self) # Keep on top of launcher
         self.version_dialog.grab_set() # Grab focus (modal)
         
-        # Center the dialog on the launcher
-        x = self.winfo_x() + (self.winfo_width() // 2) - 150
-        y = self.winfo_y() + (self.winfo_height() // 2) - 225
+        # Position near the mouse cursor where clicked
+        mx, my = self.winfo_pointerxy()
+        x = max(0, min(mx - 150, self.winfo_screenwidth() - 300))
+        y = max(0, min(my - 225, self.winfo_screenheight() - 450))
         self.version_dialog.geometry(f"+{x}+{y}")
 
+        # Calculate offset relative to parent window and bind synchronization
+        px, py = self.winfo_x(), self.winfo_y()
+        offset_x = x - px
+        offset_y = y - py
+
+        def sync_position(event):
+            if event.widget == self and hasattr(self, "version_dialog") and self.version_dialog.winfo_exists():
+                self.version_dialog.geometry(f"+{self.winfo_x() + offset_x}+{self.winfo_y() + offset_y}")
+
+        bind_id = self.bind("<Configure>", sync_position, add="+")
+        
+        def on_destroy(event):
+            if event.widget == self.version_dialog:
+                try:
+                    self.unbind("<Configure>", bind_id)
+                except Exception:
+                    pass
+        self.version_dialog.bind("<Destroy>", on_destroy)
+
+        # Main frame wrapper with border
+        main_frame = ctk.CTkFrame(
+            self.version_dialog,
+            fg_color=APP_BG,
+            border_width=2,
+            border_color=BORDER,
+            corner_radius=12
+        )
+        main_frame.pack(fill="both", expand=True)
+
+        # Header Title Label
+        header_lbl = ctk.CTkLabel(
+            main_frame,
+            text="SELECT VERSION",
+            font=ctk.CTkFont(family="Orbitron", size=12, weight="bold"),
+            text_color=SUCCESS_COLOR
+        )
+        header_lbl.pack(pady=(15, 5))
+
         # Search frame
-        search_frame = ctk.CTkFrame(self.version_dialog, fg_color="transparent")
-        search_frame.pack(fill="x", padx=15, pady=(15, 10))
+        search_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        search_frame.pack(fill="x", padx=15, pady=(5, 10))
         
         search_var = ctk.StringVar()
         search_entry = ctk.CTkEntry(
@@ -706,8 +876,21 @@ class LauncherWindow(ctk.CTk):
         search_entry.focus()
 
         # Scrollable Frame for Versions
-        scroll_frame = ctk.CTkScrollableFrame(self.version_dialog, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK)
-        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        scroll_frame = ctk.CTkScrollableFrame(main_frame, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK)
+        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(0, 10))
+
+        # Cancel Button
+        btn_cancel = ctk.CTkButton(
+            main_frame,
+            text="CANCEL",
+            height=32,
+            fg_color=SECONDARY_BUTTON,
+            hover_color=SECONDARY_HOVER,
+            text_color=TEXT_PRIMARY,
+            font=ctk.CTkFont(family="Orbitron", size=11, weight="bold"),
+            command=self.version_dialog.destroy
+        )
+        btn_cancel.pack(fill="x", padx=15, pady=(0, 15))
 
         buttons = []
 
@@ -765,17 +948,57 @@ class LauncherWindow(ctk.CTk):
         self.loader_dialog.title("Select Loader / Type")
         self.loader_dialog.geometry("300x450")
         self.loader_dialog.resizable(False, False)
+        self.loader_dialog.overrideredirect(True) # Make borderless/non-movable
         self.loader_dialog.transient(self) # Keep on top of launcher
         self.loader_dialog.grab_set() # Grab focus (modal)
         
-        # Center the dialog on the launcher
-        x = self.winfo_x() + (self.winfo_width() // 2) - 150
-        y = self.winfo_y() + (self.winfo_height() // 2) - 225
+        # Position near the mouse cursor where clicked
+        mx, my = self.winfo_pointerxy()
+        x = max(0, min(mx - 150, self.winfo_screenwidth() - 300))
+        y = max(0, min(my - 225, self.winfo_screenheight() - 450))
         self.loader_dialog.geometry(f"+{x}+{y}")
 
+        # Calculate offset relative to parent window and bind synchronization
+        px, py = self.winfo_x(), self.winfo_y()
+        offset_x = x - px
+        offset_y = y - py
+
+        def sync_position(event):
+            if event.widget == self and hasattr(self, "loader_dialog") and self.loader_dialog.winfo_exists():
+                self.loader_dialog.geometry(f"+{self.winfo_x() + offset_x}+{self.winfo_y() + offset_y}")
+
+        bind_id = self.bind("<Configure>", sync_position, add="+")
+        
+        def on_destroy_loader(event):
+            if event.widget == self.loader_dialog:
+                try:
+                    self.unbind("<Configure>", bind_id)
+                except Exception:
+                    pass
+        self.loader_dialog.bind("<Destroy>", on_destroy_loader)
+
+        # Main frame wrapper with border
+        main_frame = ctk.CTkFrame(
+            self.loader_dialog,
+            fg_color=APP_BG,
+            border_width=2,
+            border_color=BORDER,
+            corner_radius=12
+        )
+        main_frame.pack(fill="both", expand=True)
+
+        # Header Title Label
+        header_lbl = ctk.CTkLabel(
+            main_frame,
+            text="SELECT LOADER / TYPE",
+            font=ctk.CTkFont(family="Orbitron", size=12, weight="bold"),
+            text_color=SUCCESS_COLOR
+        )
+        header_lbl.pack(pady=(15, 5))
+
         # Search frame
-        search_frame = ctk.CTkFrame(self.loader_dialog, fg_color="transparent")
-        search_frame.pack(fill="x", padx=15, pady=(15, 10))
+        search_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        search_frame.pack(fill="x", padx=15, pady=(5, 10))
         
         search_var = ctk.StringVar()
         search_entry = ctk.CTkEntry(
@@ -790,8 +1013,21 @@ class LauncherWindow(ctk.CTk):
         search_entry.focus()
 
         # Scrollable Frame for Loaders
-        scroll_frame = ctk.CTkScrollableFrame(self.loader_dialog, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK)
-        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+        scroll_frame = ctk.CTkScrollableFrame(main_frame, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK)
+        scroll_frame.pack(fill="both", expand=True, padx=15, pady=(0, 10))
+
+        # Cancel Button
+        btn_cancel = ctk.CTkButton(
+            main_frame,
+            text="CANCEL",
+            height=32,
+            fg_color=SECONDARY_BUTTON,
+            hover_color=SECONDARY_HOVER,
+            text_color=TEXT_PRIMARY,
+            font=ctk.CTkFont(family="Orbitron", size=11, weight="bold"),
+            command=self.loader_dialog.destroy
+        )
+        btn_cancel.pack(fill="x", padx=15, pady=(0, 15))
 
         loaders = [
             "Vanilla", "Fabric", "NeoForge", "Forge", "Quilt", 
