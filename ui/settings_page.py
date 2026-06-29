@@ -1045,6 +1045,13 @@ class SettingsPage(ctk.CTkFrame):
                     self.update_manager.current_version = version
                     self.lbl_update_version.configure(text=f"Current version: v{version} (Latest)", text_color=TEXT_MUTED)
                     self.btn_check_update.configure(state="normal", text="Check for Updates")
+                    
+                    # Update sidebar credit label on parent window
+                    if hasattr(self, "toplevel") and self.toplevel and hasattr(self.toplevel, "credit_label") and self.toplevel.credit_label:
+                        saved_style = self.config_manager.get("launcher_style", "alien").lower()
+                        title = "Unicorn Launcher" if saved_style == "unicorn" else "Alien Launcher"
+                        self.toplevel.credit_label.configure(text=f"{title} v{version}")
+
                     messagebox.showinfo("Update Complete", f"Launcher has been updated to v{version} successfully! UI refreshed.")
                 else:
                     self.btn_check_update.configure(state="normal", text="Check for Updates")
