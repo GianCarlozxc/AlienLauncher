@@ -1,6 +1,27 @@
 import sys
 import os
 
+# Disable SSL verification globally to prevent SSL: CERTIFICATE_VERIFY_FAILED errors
+# (common behind proxies, school networks, or environments with outdated certificates)
+try:
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
+except Exception:
+    pass
+
+try:
+    import requests
+    original_request = requests.Session.request
+    def patched_request(self, method, url, **kwargs):
+        kwargs.setdefault('verify', False)
+        return original_request(self, method, url, **kwargs)
+    requests.Session.request = patched_request
+    
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except Exception:
+    pass
+
 def main():
     try:
         # Ensure our assets directory exists
