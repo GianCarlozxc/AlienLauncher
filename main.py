@@ -37,6 +37,41 @@ try:
 except Exception:
     pass
 
+# Optimize scroll speed globally for CustomTkinter scrollable frames
+try:
+    import customtkinter as ctk
+    
+    def faster_mouse_wheel_all(self, event):
+        if self._check_if_valid_scroll(event.widget):
+            if sys.platform.startswith("win"):
+                # Scroll 3x faster on Windows (changed division from 6 to 2)
+                if self._shift_pressed:
+                    if self._parent_canvas.xview() != (0.0, 1.0):
+                        self._parent_canvas.xview("scroll", -int(event.delta / 2), "units")
+                else:
+                    if self._parent_canvas.yview() != (0.0, 1.0):
+                        self._parent_canvas.yview("scroll", -int(event.delta / 2), "units")
+            elif sys.platform == "darwin":
+                # Scroll 3x faster on MacOS
+                if self._shift_pressed:
+                    if self._parent_canvas.xview() != (0.0, 1.0):
+                        self._parent_canvas.xview("scroll", -event.delta * 3, "units")
+                else:
+                    if self._parent_canvas.yview() != (0.0, 1.0):
+                        self._parent_canvas.yview("scroll", -event.delta * 3, "units")
+            else:
+                # Scroll 3x faster on Linux/X11
+                if self._shift_pressed:
+                    if self._parent_canvas.xview() != (0.0, 1.0):
+                        self._parent_canvas.xview_scroll(-3 if event.num == 4 else 3, "units")
+                else:
+                    if self._parent_canvas.yview() != (0.0, 1.0):
+                        self._parent_canvas.yview_scroll(-3 if event.num == 4 else 3, "units")
+
+    ctk.CTkScrollableFrame._mouse_wheel_all = faster_mouse_wheel_all
+except Exception as e:
+    print(f"Failed to apply scroll speed optimization patch: {e}")
+
 def main():
     try:
         # Ensure our assets directory exists
