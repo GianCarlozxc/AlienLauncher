@@ -518,7 +518,7 @@ class ModsPage(ctk.CTkFrame):
                     fg_color="#2C2C2C", 
                     hover_color="#3A3A3A",
                     text_color="#CCCCCC",
-                    command=lambda p=project_id, s=slug, b=btn_install, pb=progress_bar, sl=status_lbl, title=title_text, isc=is_curseforge, cf=cf_raw_hit, pt=project_type: self.click_install_mod(p, s, b, pb, sl, title, isc, cf, pt)
+                    command=lambda p=project_id, s=slug, b=btn_install, pb=progress_bar, sl=status_lbl, title=title_text, isc=is_curseforge, cf=cf_raw_hit, pt=project_type, icon=icon_url: self.click_install_mod(p, s, b, pb, sl, title, isc, cf, pt, icon)
                 )
 
         # Update pagination buttons state
@@ -535,7 +535,7 @@ class ModsPage(ctk.CTkFrame):
         else:
             self.btn_next.configure(state="disabled")
 
-    def load_icon_async(self, icon_url, label_widget):
+    def load_icon_async(self, icon_url, label_widget, size=(40, 40)):
         def _thread():
             try:
                 req = urllib.request.Request(
@@ -546,7 +546,7 @@ class ModsPage(ctk.CTkFrame):
                     img_data = response.read()
                 pil_img = Image.open(io.BytesIO(img_data))
                 # Resize
-                ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=(40, 40))
+                ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=size)
                 
                 def _update():
                     if label_widget.winfo_exists():
@@ -557,7 +557,7 @@ class ModsPage(ctk.CTkFrame):
                 pass
         threading.Thread(target=_thread, daemon=True).start()
 
-    def click_install_mod(self, project_id, slug, button, progress_bar, status_label, mod_title, is_curseforge=False, cf_raw_hit=None, project_type="mod"):
+    def click_install_mod(self, project_id, slug, button, progress_bar, status_label, mod_title, is_curseforge=False, cf_raw_hit=None, project_type="mod", icon_url=None):
         button.configure(state="disabled", text="Loading...")
         status_label.configure(text="Loading versions...")
         status_label.pack(pady=(2, 0))
@@ -624,11 +624,11 @@ class ModsPage(ctk.CTkFrame):
                 
             self.run_in_gui(button.configure, text="Install", state="normal")
             self.run_in_gui(status_label.pack_forget)
-            self.run_in_gui(self.show_mod_versions_dialog, project_id, slug, button, progress_bar, status_label, mod_title, files_list, is_curseforge, project_type)
+            self.run_in_gui(self.show_mod_versions_dialog, project_id, slug, button, progress_bar, status_label, mod_title, files_list, is_curseforge, project_type, icon_url)
 
         threading.Thread(target=_fetch_thread, daemon=True).start()
 
-    def show_mod_versions_dialog(self, project_id, slug, button, progress_bar, status_label, mod_title, files_list, is_curseforge, project_type="mod"):
+    def show_mod_versions_dialog(self, project_id, slug, button, progress_bar, status_label, mod_title, files_list, is_curseforge, project_type="mod", icon_url=None):
         dialog_attr = f"mod_dialog_{project_id}"
         if hasattr(self, dialog_attr):
             old_dialog = getattr(self, dialog_attr)
@@ -760,11 +760,11 @@ class ModsPage(ctk.CTkFrame):
                 fg_color="#2A2A2A" if status_text != "Compatible" else "#2ECC71",
                 hover_color="#3A3A3A" if status_text != "Compatible" else "#27AE60",
                 text_color="#CCCCCC" if status_text != "Compatible" else "#121212",
-                command=lambda f_obj=f: self.trigger_mod_download_from_dialog(dialog, project_id, slug, button, progress_bar, status_label, mod_title, f_obj, is_curseforge, project_type)
+                command=lambda f_obj=f: self.trigger_mod_download_from_dialog(dialog, project_id, slug, button, progress_bar, status_label, mod_title, f_obj, is_curseforge, project_type, icon_url)
             )
             btn_install_row.grid(row=0, column=1, padx=12, pady=10, sticky="e")
 
-    def trigger_mod_download_from_dialog(self, dialog, project_id, slug, button, progress_bar, status_label, mod_title, file_obj, is_curseforge, project_type="mod"):
+    def trigger_mod_download_from_dialog(self, dialog, project_id, slug, button, progress_bar, status_label, mod_title, file_obj, is_curseforge, project_type="mod", icon_url=None):
         dialog.destroy()
         button.configure(state="disabled", text="Connecting...")
         
@@ -836,7 +836,8 @@ class ModsPage(ctk.CTkFrame):
                 installed_map[project_id] = {
                     "filename": result,
                     "title": mod_title,
-                    "project_type": project_type
+                    "project_type": project_type,
+                    "icon_url": icon_url
                 }
                 self.config_manager.set("installed_mods", installed_map)
                 
@@ -867,6 +868,7 @@ class ModsPage(ctk.CTkFrame):
         val = installed_map.get(project_id)
         filename = val.get("filename") if isinstance(val, dict) else val
         project_type = val.get("project_type", "mod") if isinstance(val, dict) else "mod"
+        icon_url = val.get("icon_url") if isinstance(val, dict) else None
         
         if filename:
             success, msg = self.mods_manager.delete_content(filename, project_type)
@@ -881,7 +883,7 @@ class ModsPage(ctk.CTkFrame):
                     hover_color="#3A3A3A",
                     text_color="#CCCCCC",
                     state="normal",
-                    command=lambda: self.click_install_mod(project_id, slug, button, progress_bar, status_label, mod_title, is_curseforge=slug.startswith("cf_"), cf_raw_hit=None, project_type=project_type)
+                    command=lambda: self.click_install_mod(project_id, slug, button, progress_bar, status_label, mod_title, is_curseforge=slug.startswith("cf_"), cf_raw_hit=None, project_type=project_type, icon_url=icon_url)
                 )
                 status_label.configure(text="Uninstalled.")
                 
@@ -903,7 +905,7 @@ class ModsPage(ctk.CTkFrame):
                 hover_color="#3A3A3A",
                 text_color="#CCCCCC",
                 state="normal",
-                command=lambda: self.click_install_mod(project_id, slug, button, progress_bar, status_label, mod_title, is_curseforge=slug.startswith("cf_"), cf_raw_hit=None, project_type=project_type)
+                command=lambda: self.click_install_mod(project_id, slug, button, progress_bar, status_label, mod_title, is_curseforge=slug.startswith("cf_"), cf_raw_hit=None, project_type=project_type, icon_url=icon_url)
             )
             status_label.configure(text="File not found.")
 
@@ -944,31 +946,34 @@ class ModsPage(ctk.CTkFrame):
                 return
 
             installed_map = self.config_manager.get("installed_mods", {})
-            # Map filename -> (project_id, title)
+            # Map filename -> (project_id, title, icon_url)
             file_to_info = {}
             for pid, val in installed_map.items():
                 if isinstance(val, dict):
                     fname = val.get("filename")
                     title = val.get("title")
                     val_project_type = val.get("project_type", "mod")
+                    icon_url = val.get("icon_url")
                 else:
                     fname = val
                     title = None
                     val_project_type = "mod"
+                    icon_url = None
                 if fname and val_project_type == project_type:
-                    file_to_info[fname] = (pid, title)
+                    file_to_info[fname] = (pid, title, icon_url)
 
             for jar in installed_files:
                 # Mod card inside Downloaded Mods list
                 card = ctk.CTkFrame(self.downloaded_frame, fg_color="#1E1E1E", border_width=1, border_color="#2C2C2C", corner_radius=6)
                 card.pack(fill="x", pady=4, padx=5)
                 
-                # Column weights: Checkbox (w=0), Info (w=1), Delete button (w=0)
+                # Column weights: Checkbox (w=0), Icon (w=0), Info (w=1), Delete button (w=0)
                 card.grid_columnconfigure(0, weight=0)
-                card.grid_columnconfigure(1, weight=1)
-                card.grid_columnconfigure(2, weight=0)
+                card.grid_columnconfigure(1, weight=0)
+                card.grid_columnconfigure(2, weight=1)
+                card.grid_columnconfigure(3, weight=0)
                 
-                pid, title = file_to_info.get(jar, (None, None))
+                pid, title, icon_url = file_to_info.get(jar, (None, None, None))
                 
                 # Checkbox
                 var = ctk.BooleanVar(value=False)
@@ -987,9 +992,15 @@ class ModsPage(ctk.CTkFrame):
                 )
                 chk.grid(row=0, column=0, padx=(10, 0), pady=8, sticky="w")
                 
+                # Icon
+                icon_lbl = ctk.CTkLabel(card, text="📦", font=ctk.CTkFont(size=18), width=32, height=32)
+                icon_lbl.grid(row=0, column=1, padx=(10, 0), pady=8, sticky="w")
+                if icon_url:
+                    self.load_icon_async(icon_url, icon_lbl, size=(32, 32))
+                
                 # Info frame
                 info_f = ctk.CTkFrame(card, fg_color="transparent")
-                info_f.grid(row=0, column=1, padx=(10, 10), pady=8, sticky="w")
+                info_f.grid(row=0, column=2, padx=(10, 10), pady=8, sticky="w")
                 
                 disp_title = title if title else jar
                 if len(disp_title) > 28:
@@ -1031,7 +1042,7 @@ class ModsPage(ctk.CTkFrame):
                     font=ctk.CTkFont(size=12),
                     command=lambda f=jar, p=pid, pt=project_type: self.delete_jar_file(f, p, pt)
                 )
-                btn_del.grid(row=0, column=2, padx=10, pady=8, sticky="e")
+                btn_del.grid(row=0, column=3, padx=10, pady=8, sticky="e")
                 
         self.run_in_gui(_update)
 
