@@ -9,7 +9,7 @@ class ModsManager:
         self.api_key = "mrp_S3hxu7tTa0kbI1YkWcLI7tE2AtBAIl52ILINLvl4uaafdsszAaw3dgMiXsFT"
         self.base_url = "https://api.modrinth.com/v2"
         # CurseForge default API key and base URL
-        self.cf_default_api_key = "$2a$10$qxE0o64lk7rAqkdtkn3X0..QmBPmkioJpE1CJVgo9CmqTDBly0MIi"
+        self.cf_default_api_key = "$2a$10$.iQoyiZ3z5cRwKMtIVm39O.zEsmrBO0JDVentIncpttrd5MKz0XZy"
         self.cf_base_url = "https://api.curseforge.com/v1"
 
     def get_cf_api_key(self):
