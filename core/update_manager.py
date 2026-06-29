@@ -24,7 +24,7 @@ class UpdateManager:
             parts = url.replace("https://raw.githubusercontent.com/", "").split("/")
             if len(parts) >= 2:
                 owner, repo = parts[0], parts[1]
-                api_url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
+                api_url = f"https://api.github.com/repos/{owner}/{repo}/releases"
 
         try:
             if api_url:
@@ -32,24 +32,44 @@ class UpdateManager:
                     headers = {"User-Agent": "Alien-Launcher-Updater/1.0.0"}
                     res = requests.get(api_url, headers=headers, timeout=5, verify=False)
                     if res.status_code == 200:
-                        data = res.json()
-                        version = data.get("tag_name", "").lstrip("v")
-                        changelog = data.get("body", "No changelog provided.")
-                        
-                        download_url = None
-                        assets = data.get("assets", [])
-                        for asset in assets:
-                            asset_name = asset.get("name", "")
-                            if asset_name.endswith(".exe"):
-                                download_url = asset.get("browser_download_url")
-                                break
-                        if not download_url:
-                            download_url = data.get("zipball_url")
-                        
-                        if self.is_newer_version(version, self.current_version):
-                            return True, version, download_url, changelog
-                        else:
-                            return False, self.current_version, None, "You are running the latest version."
+                        releases = res.json()
+                        # Find the highest semantic version release (bypass GitHub's published_at bug)
+                        import re
+                        latest_release = None
+                        for release in releases:
+                            if release.get("draft") or release.get("prerelease"):
+                                continue
+                            
+                            tag_name = release.get("tag_name", "")
+                            if not re.match(r"^v?\d+(\.\d+)*$", tag_name):
+                                continue
+                            
+                            if not latest_release:
+                                latest_release = release
+                            else:
+                                rel_ver = release.get("tag_name", "").lstrip("v")
+                                lat_ver = latest_release.get("tag_name", "").lstrip("v")
+                                if self.is_newer_version(rel_ver, lat_ver):
+                                    latest_release = release
+                                    
+                        if latest_release:
+                            version = latest_release.get("tag_name", "").lstrip("v")
+                            changelog = latest_release.get("body", "No changelog provided.")
+                            
+                            download_url = None
+                            assets = latest_release.get("assets", [])
+                            for asset in assets:
+                                asset_name = asset.get("name", "")
+                                if asset_name.endswith(".exe"):
+                                    download_url = asset.get("browser_download_url")
+                                    break
+                            if not download_url:
+                                download_url = latest_release.get("zipball_url")
+                            
+                            if self.is_newer_version(version, self.current_version):
+                                return True, version, download_url, changelog
+                            else:
+                                return False, self.current_version, None, "You are running the latest version."
                 except Exception as api_err:
                     print(f"Failed to check updates via GitHub Releases API: {api_err}. Falling back to raw JSON.")
 
