@@ -167,6 +167,15 @@ def main():
     print(f"Version: v{clean_version}")
     print("GitHub Actions will now trigger automatically to build and release the launcher.")
     print("=" * 60)
+    
+    # Prompt to run build.bat
+    confirm_build = input("\nDo you want to compile this new version locally now using build.bat? (y/N): ").strip().lower()
+    if confirm_build == 'y':
+        print("\nLaunching build.bat...\n")
+        if sys.platform == "win32":
+            subprocess.run(["cmd.exe", "/c", "build.bat"])
+        else:
+            subprocess.run(["bash", "build.bat"])
 
 if __name__ == "__main__":
     try:
