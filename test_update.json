@@ -1,5 +1,5 @@
 {
-    "version": "1.0.1",
-    "changelog": "This is a local update check test.\n\n- Added Check for Updates feature in settings tab\n- Added self-updating Windows batch sequence\n- Optimized launcher thread loops for smoother rendering",
+    "version": "1.0.5",
+    "changelog": "Update",
     "download_url": "C:\\Users\\Administrator\\Desktop\\Minecraft Launcher\\dist\\Alien Launcher.exe"
 }

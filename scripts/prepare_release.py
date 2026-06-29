@@ -59,6 +59,23 @@ def generate_update_json(clean_version, changelog):
         json.dump(data, f, indent=4, ensure_ascii=False)
         
     print(f"Generated update.json for version {clean_version}")
+    
+    # Also update test_update.json if it exists, to match the new version and keep local testing in sync
+    test_json_path = os.path.join(project_root, "test_update.json")
+    if os.path.exists(test_json_path):
+        try:
+            with open(test_json_path, "r", encoding="utf-8") as f:
+                test_data = json.load(f)
+        except Exception:
+            test_data = {}
+        
+        test_data["version"] = clean_version
+        test_data["changelog"] = formatted_changelog
+        test_data["download_url"] = os.path.join(project_root, "dist", "Alien Launcher.exe")
+        
+        with open(test_json_path, "w", encoding="utf-8") as f:
+            json.dump(test_data, f, indent=4, ensure_ascii=False)
+        print(f"Updated test_update.json for version {clean_version}")
 
 if __name__ == "__main__":
     # Prioritize environment variables (useful for GitHub Actions to avoid shell escaping issues)

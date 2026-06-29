@@ -78,8 +78,61 @@ class MinecraftManager:
             return filtered
         except Exception as e:
             print(f"Error fetching version list: {e}")
-            # Return some common default versions as fallback
-            return ["1.20.4", "1.20.1", "1.19.4", "1.18.2", "1.16.5", "1.12.2", "1.8.9"]
+            # Even when fetching online versions fails, we MUST preserve selected and installed versions!
+            installed = []
+            try:
+                installed = self.get_installed_versions()
+            except Exception:
+                pass
+            selected = self.config_manager.get("selected_version")
+            loader_type = self.config_manager.get("loader_type", "Vanilla")
+            
+            # Attempt to load local offline versions manifest
+            versions = []
+            try:
+                import json
+                if getattr(sys, 'frozen', False):
+                    base_path = sys._MEIPASS
+                else:
+                    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                cache_path = os.path.join(base_path, "assets", "version_manifest_v2.json")
+                if os.path.exists(cache_path):
+                    with open(cache_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    versions = data.get("versions", [])
+            except Exception as cache_err:
+                print(f"Error loading offline version cache: {cache_err}")
+                
+            releases = []
+            if versions:
+                for v in versions:
+                    v_type = v.get("type")
+                    v_id = v.get("id")
+                    
+                    if loader_type == "Snapshot":
+                        if v_type == "snapshot":
+                            releases.append(v_id)
+                    elif loader_type == "Old Beta/Alpha":
+                        if v_type in ["old_beta", "old_alpha"]:
+                            releases.append(v_id)
+                    else:
+                        # Release, Vanilla, Fabric, Forge, etc.
+                        if v_type == "release":
+                            releases.append(v_id)
+            else:
+                # Absolute fallback if offline cache is missing/corrupted
+                releases = ["1.20.4", "1.20.1", "1.19.4", "1.18.2", "1.16.5", "1.12.2", "1.8.9"]
+            
+            filtered = []
+            if selected:
+                filtered.append(selected)
+            for inst in installed:
+                if inst not in filtered:
+                    filtered.append(inst)
+            for r in releases:
+                if r not in filtered:
+                    filtered.append(r)
+            return filtered
 
     def detect_java_paths(self):
         java_paths = []

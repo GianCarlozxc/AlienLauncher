@@ -999,9 +999,9 @@ class SettingsPage(ctk.CTkFrame):
             
             def _gui_finish():
                 if success:
-                    import sys
+                    import os
                     messagebox.showinfo("Updating Launcher", "Update downloaded successfully!\n\nThe launcher will now close and apply the update.")
-                    sys.exit(0)
+                    os._exit(0)
                 else:
                     self.btn_check_update.configure(state="normal", text="Check for Updates")
                     self.lbl_update_version.configure(text="Update failed", text_color="#E74C3C")
