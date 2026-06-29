@@ -74,6 +74,14 @@ except Exception as e:
 
 def main():
     try:
+        # Clean up any leftover .old executable from in-place updates
+        try:
+            old_exe = sys.executable + ".old"
+            if os.path.exists(old_exe):
+                os.remove(old_exe)
+        except Exception:
+            pass
+
         # Ensure our assets directory exists
         if not os.path.exists("assets"):
             os.makedirs("assets", exist_ok=True)
