@@ -14,7 +14,22 @@ try:
     original_request = requests.Session.request
     def patched_request(self, method, url, **kwargs):
         kwargs.setdefault('verify', False)
-        return original_request(self, method, url, **kwargs)
+        # Ensure a standard User-Agent is set if not already present
+        headers = kwargs.get('headers') or {}
+        if not any(k.lower() == 'user-agent' for k in headers.keys()):
+            headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            kwargs['headers'] = headers
+            
+        res = original_request(self, method, url, **kwargs)
+        
+        # Detect firewalls or network block pages (e.g. FortiGuard) returning HTML for JSON APIs
+        is_json_endpoint = url.endswith('.json') or 'api' in url or 'manifest' in url
+        if is_json_endpoint and res.text:
+            text_prefix = res.text.strip().lower()
+            if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or 'fortiguard' in text_prefix or 'blocked' in text_prefix:
+                raise Exception("Your network connection is blocked by a firewall, web filter, or captive portal (e.g., FortiGuard). Please disable your VPN/filter or check your internet usage policy.")
+                
+        return res
     requests.Session.request = patched_request
     
     import urllib3
