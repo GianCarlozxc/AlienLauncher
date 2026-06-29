@@ -6,7 +6,16 @@ echo ============================================================
 echo                  Alien Launcher Local Builder
 echo ============================================================
 echo.
+:: Prompt to build or skip
+set /p choice="Do you want to run the local build now? (y/N): "
+if /i not "%choice%"=="y" (
+    echo.
+    echo Build skipped. Exiting...
+    timeout /t 2 >nul
+    exit /b 0
+)
 
+echo.
 :: Check if Python is installed
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
