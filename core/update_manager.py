@@ -45,14 +45,71 @@ class UpdateManager:
 
     def download_and_apply_update(self, download_url, progress_callback=None):
         try:
-            # 1. Resolve executable path
-            if getattr(sys, 'frozen', False):
-                current_exe_path = sys.executable
-            else:
+            if not getattr(sys, 'frozen', False):
+                # Option B: Python source code update flow
                 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                current_exe_path = os.path.join(project_root, "dist", "Alien Launcher.exe")
-                os.makedirs(os.path.dirname(current_exe_path), exist_ok=True)
+                url = self.get_update_url()
+                zip_url = url.replace("raw.githubusercontent.com", "github.com").replace("/main/update.json", "/archive/refs/heads/main.zip")
+                
+                temp_dir = os.environ.get("TEMP", os.path.expanduser("~"))
+                zip_temp_path = os.path.join(temp_dir, "AlienLauncher_source.zip")
+                
+                headers = {"User-Agent": "Alien-Launcher-Updater/1.0.0"}
+                res = requests.get(zip_url, stream=True, headers=headers, timeout=60, verify=False)
+                res.raise_for_status()
+                
+                total_size = int(res.headers.get('content-length', 0))
+                downloaded = 0
+                
+                with open(zip_temp_path, "wb") as f:
+                    for chunk in res.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if progress_callback and total_size > 0:
+                                progress_callback(downloaded, total_size)
+                
+                import zipfile
+                import shutil
+                extract_temp_dir = os.path.join(temp_dir, "AlienLauncher_extracted")
+                if os.path.exists(extract_temp_dir):
+                    shutil.rmtree(extract_temp_dir)
+                os.makedirs(extract_temp_dir, exist_ok=True)
+                
+                with zipfile.ZipFile(zip_temp_path, "r") as zip_ref:
+                    zip_ref.extractall(extract_temp_dir)
+                
+                inner_dir = None
+                for name in os.listdir(extract_temp_dir):
+                    inner_path = os.path.join(extract_temp_dir, name)
+                    if os.path.isdir(inner_path):
+                        inner_dir = inner_path
+                        break
+                
+                if not inner_dir:
+                    return False, "Could not find extracted source folder in zip."
+                
+                for root, dirs, files in os.walk(inner_dir):
+                    rel_path = os.path.relpath(root, inner_dir)
+                    target_dir = project_root if rel_path == "." else os.path.join(project_root, rel_path)
+                    os.makedirs(target_dir, exist_ok=True)
+                    
+                    for file in files:
+                        if file.lower() in ["config.json", "test_update.json"]:
+                            continue
+                        src_file = os.path.join(root, file)
+                        dest_file = os.path.join(target_dir, file)
+                        try:
+                            shutil.copy2(src_file, dest_file)
+                        except Exception as copy_err:
+                            print(f"Error copying {file}: {copy_err}")
+                
+                shutil.rmtree(extract_temp_dir)
+                os.remove(zip_temp_path)
+                return True, "Source code updated successfully!"
 
+            # Frozen/EXE update flow
+            current_exe_path = sys.executable
             temp_dir = os.environ.get("TEMP", os.path.expanduser("~"))
             new_exe_temp_path = os.path.join(temp_dir, "Alien_Launcher_New.exe")
 
