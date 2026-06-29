@@ -122,12 +122,23 @@ class SkinPage(ctk.CTkFrame):
 
     def load_profile_skin(self):
         username = self.config_manager.get("username", "AlienPlayer")
+        equipped = self.config_manager.get("equipped_skin", {})
+        equipped_url = equipped.get("skin_url") if isinstance(equipped, dict) else None
 
         def _thread():
-            urls = [
+            urls = []
+            if equipped_url:
+                urls.append(equipped_url)
+            
+            # If account is Ely.by, try to fetch their Ely.by skin as a fallback
+            account_type = self.config_manager.get("account_type", "Offline")
+            if account_type == "Ely.by":
+                urls.append(f"https://ely.by/services/skins/{username}.png")
+
+            urls.extend([
                 f"https://minotar.net/skin/{username}",
                 f"https://minecraft.tools/download-skin/{username}"
-            ]
+            ])
             for url in urls:
                 try:
                     res = requests.get(url, headers={"User-Agent": "Alien Launcher"}, timeout=12)
@@ -135,7 +146,8 @@ class SkinPage(ctk.CTkFrame):
                         img = Image.open(io.BytesIO(res.content)).convert("RGBA")
                         if img.width >= 64 and img.height >= 32:
                             preview = self.render_skin_front(img, scale=5)
-                            self.run_in_gui(self.set_profile_preview, preview, "Showing your current username skin.")
+                            status_text = "Showing your equipped skin." if (equipped_url and url == equipped_url) else "Showing your current username skin."
+                            self.run_in_gui(self.set_profile_preview, preview, status_text)
                             return
                 except Exception:
                     pass
