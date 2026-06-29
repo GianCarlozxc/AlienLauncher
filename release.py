@@ -162,20 +162,18 @@ def main():
     run_git_command(["push", "origin", branch])
     run_git_command(["push", "origin", tag_name, "--force"]) # force-push tag if it existed
     
+    # Automatically run build.bat as the final step
     print("\n" + "=" * 60)
     print("SUCCESS: Release changes pushed to GitHub!")
     print(f"Version: v{clean_version}")
     print("GitHub Actions will now trigger automatically to build and release the launcher.")
     print("=" * 60)
     
-    # Prompt to run build.bat
-    confirm_build = input("\nDo you want to compile this new version locally now using build.bat? (y/N): ").strip().lower()
-    if confirm_build == 'y':
-        print("\nLaunching build.bat...\n")
-        if sys.platform == "win32":
-            subprocess.run(["cmd.exe", "/c", "build.bat"])
-        else:
-            subprocess.run(["bash", "build.bat"])
+    print("\n[INFO] Starting local build compilation via build.bat as the final step...\n")
+    if sys.platform == "win32":
+        subprocess.run(["cmd.exe", "/c", "build.bat"])
+    else:
+        subprocess.run(["bash", "build.bat"])
 
 if __name__ == "__main__":
     try:

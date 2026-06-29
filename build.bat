@@ -56,15 +56,7 @@ echo dist\Alien Launcher.exe
 echo ============================================================
 echo.
 
-:: Prompt to run release.py
-set /p choice="Do you want to release this version to GitHub? (y/N): "
-if /i "%choice%"=="y" (
-    echo.
-    echo Launching release.py...
-    python release.py
-) else (
-    echo Opening output directory...
-    explorer dist
-)
+:: Open dist folder
+explorer dist
 
 pause
