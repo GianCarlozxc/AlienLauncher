@@ -60,6 +60,7 @@ class ModsPage(ctk.CTkFrame):
         
         self.current_offset = 0
         self.limit = 10
+        self.selected_files = {} # Track checkboxes: mapping filename -> (BooleanVar, project_type, project_id)
         
         self.setup_ui()
         # Load popular mods on open
@@ -224,6 +225,19 @@ class ModsPage(ctk.CTkFrame):
             command=self.refresh_installed_mods
         )
         btn_refresh_downloads.pack(side="right", padx=(10, 0))
+
+        btn_delete_selected = ctk.CTkButton(
+            downloaded_header_frame,
+            text="🗑️ Delete Selected",
+            width=120,
+            height=24,
+            fg_color="#E74C3C",
+            hover_color="#C0392B",
+            text_color="#FFFFFF",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self.delete_selected_files
+        )
+        btn_delete_selected.pack(side="right", padx=(10, 0))
 
         # Downloaded Mods Scrollable Frame
         self.downloaded_frame = ctk.CTkScrollableFrame(
@@ -899,6 +913,7 @@ class ModsPage(ctk.CTkFrame):
             for widget in self.downloaded_frame.winfo_children():
                 widget.destroy()
 
+            self.selected_files.clear() # Clear tracked selections on refresh
             project_type = self.get_selected_project_type()
             content_label = self.get_content_label(project_type)
             content_dir = self.mods_manager.get_content_directory(project_type)
@@ -947,13 +962,35 @@ class ModsPage(ctk.CTkFrame):
                 # Mod card inside Downloaded Mods list
                 card = ctk.CTkFrame(self.downloaded_frame, fg_color="#1E1E1E", border_width=1, border_color="#2C2C2C", corner_radius=6)
                 card.pack(fill="x", pady=4, padx=5)
-                card.grid_columnconfigure(0, weight=1)
+                
+                # Column weights: Checkbox (w=0), Info (w=1), Delete button (w=0)
+                card.grid_columnconfigure(0, weight=0)
+                card.grid_columnconfigure(1, weight=1)
+                card.grid_columnconfigure(2, weight=0)
+                
+                pid, title = file_to_info.get(jar, (None, None))
+                
+                # Checkbox
+                var = ctk.BooleanVar(value=False)
+                self.selected_files[jar] = (var, project_type, pid)
+                
+                chk = ctk.CTkCheckBox(
+                    card,
+                    text="",
+                    variable=var,
+                    width=20,
+                    height=20,
+                    checkbox_width=16,
+                    checkbox_height=16,
+                    fg_color="#2ECC71",
+                    hover_color="#27AE60"
+                )
+                chk.grid(row=0, column=0, padx=(10, 0), pady=8, sticky="w")
                 
                 # Info frame
                 info_f = ctk.CTkFrame(card, fg_color="transparent")
-                info_f.grid(row=0, column=0, padx=10, pady=8, sticky="w")
+                info_f.grid(row=0, column=1, padx=(10, 10), pady=8, sticky="w")
                 
-                pid, title = file_to_info.get(jar, (None, None))
                 disp_title = title if title else jar
                 if len(disp_title) > 28:
                     disp_title = disp_title[:25] + "..."
@@ -994,7 +1031,7 @@ class ModsPage(ctk.CTkFrame):
                     font=ctk.CTkFont(size=12),
                     command=lambda f=jar, p=pid, pt=project_type: self.delete_jar_file(f, p, pt)
                 )
-                btn_del.grid(row=0, column=1, padx=10, pady=8, sticky="e")
+                btn_del.grid(row=0, column=2, padx=10, pady=8, sticky="e")
                 
         self.run_in_gui(_update)
 
@@ -1016,3 +1053,31 @@ class ModsPage(ctk.CTkFrame):
             self.start_search_thread(reset_offset=False)
         else:
             messagebox.showerror("Delete Error", f"Failed to delete mod file:\n{msg}")
+
+    def delete_selected_files(self):
+        selected = [filename for filename, (var, pt, pid) in self.selected_files.items() if var.get()]
+        if not selected:
+            messagebox.showinfo("Delete Selected", "No items selected to delete.")
+            return
+
+        if not messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete the {len(selected)} selected files?"):
+            return
+
+        success_count = 0
+        installed_map = self.config_manager.get("installed_mods", {})
+        
+        for filename in selected:
+            var, pt, pid = self.selected_files[filename]
+            success, msg = self.mods_manager.delete_content(filename, pt)
+            if success:
+                success_count += 1
+                if pid:
+                    installed_map.pop(pid, None)
+
+        self.config_manager.set("installed_mods", installed_map)
+        messagebox.showinfo("Delete Selected", f"Successfully deleted {success_count} files.")
+        
+        # Refresh lists
+        self.refresh_installed_mods()
+        self.start_search_thread(reset_offset=False)
+
