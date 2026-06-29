@@ -99,9 +99,10 @@ class SplashWindow(ctk.CTk):
         self.title_lbl.pack(pady=5)
 
         # Subtitle / Muted info
+        from core.update_manager import LAUNCHER_VERSION
         self.subtitle_lbl = ctk.CTkLabel(
             self.main_frame,
-            text="COSMIC CLIENT v1.0.0",
+            text=f"COSMIC CLIENT v{LAUNCHER_VERSION}",
             font=ctk.CTkFont(family="Orbitron", size=10, weight="bold"),
             text_color="#555555"
         )
