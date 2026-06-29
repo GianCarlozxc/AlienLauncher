@@ -5,7 +5,7 @@ import requests
 import json
 import time
 
-LAUNCHER_VERSION = "1.0.4"
+LAUNCHER_VERSION = "1.0.5"
 
 class UpdateManager:
     def __init__(self, config_manager):
@@ -19,14 +19,28 @@ class UpdateManager:
     def check_for_updates(self):
         url = self.get_update_url()
         try:
-            # Local test update support to demonstrate the update flow easily
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if getattr(sys, 'frozen', False):
+                exe_dir = os.path.dirname(sys.executable)
+                if os.path.basename(exe_dir).lower() == "dist":
+                    project_root = os.path.dirname(exe_dir)
+                else:
+                    project_root = exe_dir
+            else:
+                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                
             test_json_path = os.path.join(project_root, "test_update.json")
             
             if os.path.exists(test_json_path):
                 with open(test_json_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                return True, data.get("version"), data.get("download_url"), data.get("changelog", "No changelog provided.")
+                version = data.get("version")
+                download_url = data.get("download_url")
+                changelog = data.get("changelog", "No changelog provided.")
+                
+                if self.is_newer_version(version, self.current_version):
+                    return True, version, download_url, changelog
+                else:
+                    return False, self.current_version, None, "You are running the latest version."
 
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
@@ -96,19 +110,17 @@ class UpdateManager:
             bat_content = f"""@echo off
 title Updating Alien Launcher...
 echo Waiting for Alien Launcher to close...
+set /a retry_count=0
+
 :wait_loop
-tasklist /fi "pid eq {os.getpid()}" 2>NUL | find /I "{os.getpid()}" >NUL
-if %ERRORLEVEL%==0 (
+copy /y "{new_exe_temp_path}" "{current_exe_path}" >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    set /a retry_count+=1
+    if %retry_count% gtr 15 (
+        exit /b 1
+    )
     timeout /t 1 /nobreak >nul
     goto wait_loop
-)
-
-echo Replacing executable...
-copy /y "{new_exe_temp_path}" "{current_exe_path}" >nul
-if %ERRORLEVEL% neq 0 (
-    echo Failed to apply update. Retrying in 2 seconds...
-    timeout /t 2 /nobreak >nul
-    copy /y "{new_exe_temp_path}" "{current_exe_path}" >nul
 )
 
 echo Restarting launcher...
