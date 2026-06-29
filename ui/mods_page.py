@@ -801,6 +801,23 @@ class ModsPage(ctk.CTkFrame):
             success, result = self.mods_manager.download_content(primary_file, project_type, progress_cb)
 
             if success:
+                # If this is a CurseForge modpack, extract and download its dependencies
+                if project_type == "modpack" and is_curseforge:
+                    _set_status("Extracting modpack...")
+                    zip_path = os.path.join(self.mods_manager.get_content_directory("modpack"), result)
+                    
+                    def cb(step, total, msg):
+                        if total > 0:
+                            pct = step / total
+                            self.run_in_gui(progress_bar.set, pct)
+                        _set_status(msg)
+                        
+                    pack_success, pack_msg = self.mods_manager.install_curseforge_modpack(zip_path, cb)
+                    if not pack_success:
+                        self.run_in_gui(button.configure, text="Retry", state="normal")
+                        _set_status(f"Installation failed: {pack_msg}")
+                        return
+
                 installed_map = self.config_manager.get("installed_mods", {})
                 installed_map[project_id] = {
                     "filename": result,
@@ -823,6 +840,7 @@ class ModsPage(ctk.CTkFrame):
             else:
                 self.run_in_gui(button.configure, text="Retry", state="normal")
                 _set_status(f"Error: {result}")
+
 
         threading.Thread(target=_download_thread, daemon=True).start()
 
