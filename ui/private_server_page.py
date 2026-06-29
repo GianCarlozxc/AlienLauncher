@@ -90,10 +90,19 @@ class PrivateServerPage(ctk.CTkFrame):
         dir_controls = ctk.CTkFrame(dir_selector_frame, fg_color="transparent")
         dir_controls.pack(padx=15, pady=(0, 10), fill="x")
         
-        self.dir_entry = ctk.CTkEntry(dir_controls, fg_color="#101010", border_color="#2C2C2C")
-        self.dir_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        self.dir_entry.insert(0, self.server_manager.get_server_directory())
-        self.dir_entry.configure(state="readonly")
+        self.server_list = self.get_existing_servers()
+        self.server_select_var = ctk.StringVar(value=os.path.abspath(self.server_manager.get_server_directory()))
+        
+        self.dir_combo = ctk.CTkComboBox(
+            dir_controls,
+            values=self.server_list,
+            variable=self.server_select_var,
+            command=self.on_server_select,
+            fg_color="#101010",
+            border_color="#2C2C2C",
+            state="readonly"
+        )
+        self.dir_combo.pack(side="left", fill="x", expand=True, padx=(0, 10))
         
         btn_browse = ctk.CTkButton(
             dir_controls, text="Browse...", width=80, 
@@ -279,12 +288,10 @@ class PrivateServerPage(ctk.CTkFrame):
     def browse_server_directory(self):
         selected = filedialog.askdirectory(initialdir=self.server_manager.get_server_directory())
         if selected:
-            self.server_manager.set_server_directory(selected)
-            self.dir_entry.configure(state="normal")
-            self.dir_entry.delete(0, "end")
-            self.dir_entry.insert(0, selected)
-            self.dir_entry.configure(state="readonly")
-            self.write_log(f"[System] Server directory changed to: {selected}\n")
+            abs_selected = os.path.abspath(selected)
+            self.server_manager.set_server_directory(abs_selected)
+            self.refresh_server_list()
+            self.write_log(f"[System] Server directory changed to: {abs_selected}\n")
 
     def start_server(self):
         self.write_log("[System] Launching local Minecraft server...\n")
@@ -379,7 +386,40 @@ class PrivateServerPage(ctk.CTkFrame):
         self.textbox.configure(state="disabled")
         self.textbox.see("end")
 
+    def get_existing_servers(self):
+        servers = []
+        current_dir = self.server_manager.get_server_directory()
+        if current_dir:
+            servers.append(os.path.abspath(current_dir))
+            
+        appdata_servers_dir = os.path.join(self.config_manager.get_minecraft_folder(), "servers")
+        if os.path.exists(appdata_servers_dir):
+            try:
+                for name in os.listdir(appdata_servers_dir):
+                    path = os.path.join(appdata_servers_dir, name)
+                    if os.path.isdir(path):
+                        abs_path = os.path.abspath(path)
+                        if abs_path not in servers:
+                            servers.append(abs_path)
+            except Exception:
+                pass
+        return servers
+
+    def on_server_select(self, selected_path):
+        if selected_path and os.path.exists(selected_path):
+            self.server_manager.set_server_directory(selected_path)
+            self.write_log(f"[System] Active server changed to: {selected_path}\n")
+            self.refresh_address()
+
+    def refresh_server_list(self):
+        self.server_list = self.get_existing_servers()
+        self.dir_combo.configure(values=self.server_list)
+        current = self.server_manager.get_server_directory()
+        if current:
+            self.server_select_var.set(os.path.abspath(current))
+
     def on_view_active(self):
+        self.refresh_server_list()
         self.refresh_address()
         self.update_server_status_ui()
         if self.server_manager.is_running():
@@ -430,15 +470,13 @@ class PrivateServerPage(ctk.CTkFrame):
                 self.creator_progress_frame.pack_forget()
                 if success:
                     # Update config to point to this new server
-                    self.server_manager.set_server_directory(target_dir)
+                    abs_target = os.path.abspath(target_dir)
+                    self.server_manager.set_server_directory(abs_target)
                     
                     # Update GUI field
-                    self.dir_entry.configure(state="normal")
-                    self.dir_entry.delete(0, "end")
-                    self.dir_entry.insert(0, target_dir)
-                    self.dir_entry.configure(state="readonly")
+                    self.refresh_server_list()
                     
-                    self.write_log(f"[System] Server created successfully at: {target_dir}\n")
+                    self.write_log(f"[System] Server created successfully at: {abs_target}\n")
                     self.write_log(f"[System] Launcher configuration updated to point to new server directory.\n")
                 else:
                     self.write_log(f"[System] Error creating server: {msg}\n")
