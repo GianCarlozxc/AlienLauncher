@@ -18,7 +18,41 @@ class UpdateManager:
 
     def check_for_updates(self):
         url = self.get_update_url()
+        # Fallback to GitHub Releases API if url is raw github content
+        api_url = None
+        if "raw.githubusercontent.com" in url:
+            parts = url.replace("https://raw.githubusercontent.com/", "").split("/")
+            if len(parts) >= 2:
+                owner, repo = parts[0], parts[1]
+                api_url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
+
         try:
+            if api_url:
+                try:
+                    headers = {"User-Agent": "Alien-Launcher-Updater/1.0.0"}
+                    res = requests.get(api_url, headers=headers, timeout=5, verify=False)
+                    if res.status_code == 200:
+                        data = res.json()
+                        version = data.get("tag_name", "").lstrip("v")
+                        changelog = data.get("body", "No changelog provided.")
+                        
+                        download_url = None
+                        assets = data.get("assets", [])
+                        for asset in assets:
+                            asset_name = asset.get("name", "")
+                            if asset_name.endswith(".exe"):
+                                download_url = asset.get("browser_download_url")
+                                break
+                        if not download_url:
+                            download_url = data.get("zipball_url")
+                        
+                        if self.is_newer_version(version, self.current_version):
+                            return True, version, download_url, changelog
+                        else:
+                            return False, self.current_version, None, "You are running the latest version."
+                except Exception as api_err:
+                    print(f"Failed to check updates via GitHub Releases API: {api_err}. Falling back to raw JSON.")
+
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 data = res.json()
