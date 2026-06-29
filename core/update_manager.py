@@ -19,29 +19,6 @@ class UpdateManager:
     def check_for_updates(self):
         url = self.get_update_url()
         try:
-            if getattr(sys, 'frozen', False):
-                exe_dir = os.path.dirname(sys.executable)
-                if os.path.basename(exe_dir).lower() == "dist":
-                    project_root = os.path.dirname(exe_dir)
-                else:
-                    project_root = exe_dir
-            else:
-                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                
-            test_json_path = os.path.join(project_root, "test_update.json")
-            
-            if os.path.exists(test_json_path):
-                with open(test_json_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                version = data.get("version")
-                download_url = data.get("download_url")
-                changelog = data.get("changelog", "No changelog provided.")
-                
-                if self.is_newer_version(version, self.current_version):
-                    return True, version, download_url, changelog
-                else:
-                    return False, self.current_version, None, "You are running the latest version."
-
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 data = res.json()
@@ -119,7 +96,7 @@ if %ERRORLEVEL% neq 0 (
     if %retry_count% gtr 15 (
         exit /b 1
     )
-    timeout /t 1 /nobreak >nul
+    ping 127.0.0.1 -n 2 >nul
     goto wait_loop
 )
 

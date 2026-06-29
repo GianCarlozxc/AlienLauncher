@@ -549,6 +549,15 @@ class LauncherWindow(ctk.CTk):
         max_ram = self.config_manager.get("ram_max", "4G")
         self.lbl_sett_val.configure(text=f"Min: {min_ram} / Max: {max_ram}")
 
+        # Update available versions and selection dynamically in case settings changed
+        self.available_versions = self.minecraft_manager.get_available_versions()
+        current_ver = self.config_manager.get("selected_version", "1.20.1")
+        if current_ver not in self.available_versions:
+            if self.available_versions:
+                current_ver = self.available_versions[0]
+                self.config_manager.set("selected_version", current_ver)
+        self.version_var.set(current_ver)
+
         # Update VPN Card in background
         def _get_vpn_status():
             ip = self.tailscale_manager.get_ipv4()
@@ -618,6 +627,8 @@ class LauncherWindow(ctk.CTk):
                 self.btn_play.configure(state="normal", text="PLAY GAME")
                 
                 if success:
+                    # Refresh available versions to make sure the newly installed one is detected
+                    self.available_versions = self.minecraft_manager.get_available_versions()
                     self.launch_game(version_id)
                 else:
                     messagebox.showerror("Installation Error", f"Failed to install {version_id}:\n{err}")
@@ -662,6 +673,9 @@ class LauncherWindow(ctk.CTk):
         if hasattr(self, "version_dialog") and self.version_dialog.winfo_exists():
             self.version_dialog.focus()
             return
+
+        # Dynamically refresh the available versions list to detect new/updated installations
+        self.available_versions = self.minecraft_manager.get_available_versions()
 
         self.version_dialog = ctk.CTkToplevel(self)
         self.version_dialog.title("Select Version")

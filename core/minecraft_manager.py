@@ -23,6 +23,7 @@ class MinecraftManager:
     def __init__(self, config_manager):
         self.config_manager = config_manager
         self.launch_process = None
+        self._online_versions_cache = None
 
     def get_installed_versions(self):
         mc_dir = self.config_manager.get_minecraft_folder()
@@ -34,7 +35,12 @@ class MinecraftManager:
             return []
             
         try:
-            return [d for d in os.listdir(versions_dir) if os.path.isdir(os.path.join(versions_dir, d))]
+            installed_dirs = []
+            for d in os.listdir(versions_dir):
+                dir_path = os.path.join(versions_dir, d)
+                if os.path.isdir(dir_path) and os.path.exists(os.path.join(dir_path, f"{d}.json")):
+                    installed_dirs.append(d)
+            return installed_dirs
         except Exception as e:
             print(f"Error reading installed versions: {e}")
             return []
@@ -42,7 +48,9 @@ class MinecraftManager:
     def get_available_versions(self):
         try:
             loader_type = self.config_manager.get("loader_type", "Vanilla")
-            versions = minecraft_launcher_lib.utils.get_version_list()
+            if not self._online_versions_cache:
+                self._online_versions_cache = minecraft_launcher_lib.utils.get_version_list()
+            versions = self._online_versions_cache
             installed = self.get_installed_versions()
             selected = self.config_manager.get("selected_version")
             
@@ -239,11 +247,21 @@ class MinecraftManager:
         if not os.path.exists(versions_dir):
             return vanilla_version_id
         try:
+            matches = []
             for d in os.listdir(versions_dir):
                 if loader_prefix.lower() in d.lower() and vanilla_version_id in d:
-                    return d
-        except Exception:
-            pass
+                    dir_path = os.path.join(versions_dir, d)
+                    if os.path.isdir(dir_path) and os.path.exists(os.path.join(dir_path, f"{d}.json")):
+                        matches.append(d)
+            if matches:
+                # Sort matching versions numerically so that the newest version is returned
+                import re
+                def version_key(name):
+                    return [int(c) for c in re.findall(r'\d+', name)]
+                matches.sort(key=version_key)
+                return matches[-1]
+        except Exception as e:
+            print(f"Error finding loader version: {e}")
         return vanilla_version_id
 
     def is_loader_installed(self, vanilla_version_id, loader_type):

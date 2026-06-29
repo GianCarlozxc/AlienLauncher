@@ -603,6 +603,12 @@ class SettingsPage(ctk.CTkFrame):
         )
         self.btn_check_update.grid(row=0, column=1, rowspan=2, sticky="e", padx=(10, 0))
 
+        # Progress bar for update download (hidden initially)
+        self.update_progress_bar = ctk.CTkProgressBar(row_frame_9, progress_color=ACCENT, height=4)
+        self.update_progress_bar.grid(row=2, column=0, columnspan=2, pady=(8, 0), sticky="ew")
+        self.update_progress_bar.set(0)
+        self.update_progress_bar.grid_remove()
+
         # ----------------------------------------------------
         # Save Button
         # ----------------------------------------------------
@@ -989,15 +995,20 @@ class SettingsPage(ctk.CTkFrame):
     def apply_launcher_update(self, download_url):
         self.btn_check_update.configure(state="disabled", text="Updating...")
         self.lbl_update_version.configure(text="Downloading launcher update...", text_color=ACCENT)
+        self.update_progress_bar.grid()
+        self.update_progress_bar.set(0)
 
         def _thread():
             def progress_cb(downloaded, total):
                 pct = int((downloaded / total) * 100)
                 self.run_in_gui(self.lbl_update_version.configure, text=f"Downloading update... {pct}%")
+                if total > 0:
+                    self.run_in_gui(self.update_progress_bar.set, downloaded / total)
 
             success, msg = self.update_manager.download_and_apply_update(download_url, progress_cb)
             
             def _gui_finish():
+                self.update_progress_bar.grid_remove()
                 if success:
                     import os
                     messagebox.showinfo("Updating Launcher", "Update downloaded successfully!\n\nThe launcher will now close and apply the update.")
