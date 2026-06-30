@@ -93,6 +93,13 @@ class FriendsPage(ctk.CTkFrame):
             text_color="#CCCCCC"
         )
         self.acc_type_selector.grid(row=5, column=0, padx=15, pady=(0, 12), sticky="ew")
+        
+        # Disable Microsoft option as it's unfinished
+        try:
+            if "Microsoft" in self.acc_type_selector._buttons_dict:
+                self.acc_type_selector._buttons_dict["Microsoft"].configure(state="disabled")
+        except Exception:
+            pass
 
         # Tailscale IP
         lbl_ip = ctk.CTkLabel(form_card, text="Tailscale IP (Optional)", font=ctk.CTkFont(size=11, weight="bold"), text_color="#888888")

@@ -1002,6 +1002,8 @@ class SettingsPage(ctk.CTkFrame):
                 if len(disp_v) > 35:
                     disp_v = "..." + disp_v[-32:]
                     
+                is_disabled = (v == "Microsoft")
+                
                 if not filter_text or filter_text.lower() in v.lower():
                     btn = ctk.CTkButton(
                         scroll_frame,
@@ -1010,7 +1012,8 @@ class SettingsPage(ctk.CTkFrame):
                         anchor="w",
                         fg_color=ACCENT if current_var.get() == v else "transparent",
                         hover_color=SURFACE_HOVER,
-                        text_color=ACCENT_TEXT if current_var.get() == v else TEXT_SECONDARY,
+                        text_color="#666666" if is_disabled else (ACCENT_TEXT if current_var.get() == v else TEXT_SECONDARY),
+                        state="disabled" if is_disabled else "normal",
                         font=ctk.CTkFont(size=12, weight="bold"),
                         command=lambda value=v: select_and_close(value)
                     )
