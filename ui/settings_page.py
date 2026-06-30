@@ -3,6 +3,7 @@ import webbrowser
 import threading
 import customtkinter as ctk
 from tkinter import filedialog
+from PIL import Image
 import ui.custom_dialog as messagebox
 from ui.theme import (
     ACCENT, ACCENT_HOVER, ACCENT_TEXT, APP_BG, BORDER, BORDER_DARK, CARD_BORDER,
@@ -227,6 +228,71 @@ class ElyByLoginDialog(ctk.CTkToplevel):
             self.after(0, _complete)
 
         threading.Thread(target=_thread, daemon=True).start()
+
+
+class ScreenshotViewerDialog(ctk.CTkToplevel):
+    def __init__(self, parent, image_path):
+        super().__init__(parent)
+        self.image_path = image_path
+        self.title(os.path.basename(image_path))
+        self.geometry("800x600")
+        self.resizable(True, True)
+        self.grab_set()
+        
+        self.configure(fg_color=SIDEBAR_BG)
+
+        # Apply matching window icon depending on launcher style theme
+        from ui.theme import get_asset_path
+        launcher_style = "alien"
+        if hasattr(parent, "config_manager"):
+            launcher_style = parent.config_manager.get("launcher_style", "alien").lower()
+        
+        if launcher_style == "unicorn":
+            ico_path = get_asset_path("assets/Unicornlogo.ico")
+        else:
+            ico_path = get_asset_path("assets/taskbarlogo.ico")
+            
+        if os.path.exists(ico_path):
+            try:
+                self.iconbitmap(ico_path)
+            except Exception:
+                pass
+        
+        try:
+            self.pil_img = Image.open(image_path)
+        except Exception:
+            self.pil_img = None
+            
+        self.setup_ui()
+        self.bind("<Configure>", self.on_resize)
+        
+    def setup_ui(self):
+        self.img_label = ctk.CTkLabel(self, text="", fg_color="transparent")
+        self.img_label.pack(padx=20, pady=(20, 60), fill="both", expand=True)
+        
+        btn_close = ctk.CTkButton(
+            self, text="Close", fg_color=SECONDARY_BUTTON, hover_color=SECONDARY_HOVER,
+            command=self.destroy, font=ctk.CTkFont(family="Orbitron", size=12, weight="bold"),
+            width=120, height=35
+        )
+        btn_close.place(relx=0.5, rely=0.93, anchor="center")
+        
+    def on_resize(self, event=None):
+        if not self.pil_img:
+            self.img_label.configure(text="Failed to load image")
+            return
+            
+        width = max(100, self.img_label.winfo_width())
+        height = max(100, self.img_label.winfo_height())
+        
+        img_w, img_h = self.pil_img.size
+        ratio = min(width / img_w, height / img_h)
+        new_w = max(10, int(img_w * ratio))
+        new_h = max(10, int(img_h * ratio))
+        
+        resized = self.pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        ctk_img = ctk.CTkImage(light_image=resized, dark_image=resized, size=(new_w, new_h))
+        self.img_label.configure(image=ctk_img)
 
 
 class SettingsPage(ctk.CTkFrame):
@@ -632,6 +698,39 @@ class SettingsPage(ctk.CTkFrame):
         self.update_progress_bar.grid_remove()
 
         # ----------------------------------------------------
+        # Card 5: Screenshot Gallery & Manager
+        # ----------------------------------------------------
+        self.screenshot_card = ctk.CTkFrame(scrollable_container, fg_color=SURFACE, border_width=1, border_color=BORDER)
+        self.screenshot_card.grid(row=row, column=0, padx=15, pady=10, sticky="ew")
+        self.screenshot_card.grid_columnconfigure(0, weight=1)
+        row += 1
+
+        card_title_5 = ctk.CTkLabel(self.screenshot_card, text="Screenshot Gallery & Manager", font=ctk.CTkFont(weight="bold", size=14))
+        card_title_5.grid(row=0, column=0, padx=15, pady=(12, 10), sticky="w")
+
+        top_ctrl_frame = ctk.CTkFrame(self.screenshot_card, fg_color="transparent")
+        top_ctrl_frame.grid(row=1, column=0, padx=15, pady=(0, 10), sticky="ew")
+
+        btn_open_folder = ctk.CTkButton(
+            top_ctrl_frame, text="Open Folder", width=120, height=28,
+            fg_color=SECONDARY_BUTTON, hover_color=SECONDARY_HOVER, text_color=TEXT_PRIMARY,
+            font=ctk.CTkFont(weight="bold"),
+            command=self.open_screenshots_folder
+        )
+        btn_open_folder.pack(side="left", padx=(0, 10))
+
+        btn_refresh = ctk.CTkButton(
+            top_ctrl_frame, text="Refresh Gallery", width=120, height=28,
+            fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color=ACCENT_TEXT,
+            font=ctk.CTkFont(weight="bold"),
+            command=self.refresh_screenshots_gallery
+        )
+        btn_refresh.pack(side="left")
+
+        self.gallery_frame = ctk.CTkScrollableFrame(self.screenshot_card, fg_color=SURFACE_ALT, border_width=1, border_color=BORDER_DARK, height=180, orientation="horizontal")
+        self.gallery_frame.grid(row=2, column=0, padx=15, pady=(0, 15), sticky="ew")
+
+        # ----------------------------------------------------
         # Save Button
         # ----------------------------------------------------
         self.btn_save = ctk.CTkButton(
@@ -641,6 +740,9 @@ class SettingsPage(ctk.CTkFrame):
             command=self.save_settings
         )
         self.btn_save.grid(row=row, column=0, padx=15, pady=20, sticky="ew")
+
+        # Load screenshots initially
+        self.refresh_screenshots_gallery()
 
     def load_values(self):
         # Set account type
@@ -1127,3 +1229,107 @@ class SettingsPage(ctk.CTkFrame):
         else:
             self.btn_check_update.configure(state="disabled")
             self.lbl_update_version.configure(text="Update checks are disabled by configuration.", text_color=TEXT_MUTED)
+
+    def open_screenshots_folder(self):
+        mc_folder = self.folder_entry.get().strip() or self.config_manager.get_minecraft_folder()
+        scr_dir = os.path.join(mc_folder, "screenshots")
+        if not os.path.exists(scr_dir):
+            try:
+                os.makedirs(scr_dir, exist_ok=True)
+            except Exception:
+                pass
+        try:
+            os.startfile(scr_dir)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open folder: {e}")
+
+    def refresh_screenshots_gallery(self):
+        for widget in self.gallery_frame.winfo_children():
+            widget.destroy()
+
+        try:
+            mc_folder = self.folder_entry.get().strip() or self.config_manager.get_minecraft_folder()
+            mc_folder = mc_folder.strip('"').strip("'")
+            scr_dir = os.path.join(mc_folder, "screenshots")
+            if not os.path.exists(scr_dir):
+                lbl_empty = ctk.CTkLabel(self.gallery_frame, text="No screenshots found. Press F2 in-game!", text_color=TEXT_MUTED)
+                lbl_empty.pack(padx=20, pady=40)
+                return
+        except Exception:
+            lbl_empty = ctk.CTkLabel(self.gallery_frame, text="Invalid game directory path", text_color=TEXT_MUTED)
+            lbl_empty.pack(padx=20, pady=40)
+            return
+
+        import glob
+        def safe_getmtime(path):
+            try:
+                return os.path.getmtime(path)
+            except Exception:
+                return 0
+
+        try:
+            files = sorted(glob.glob(os.path.join(scr_dir, "*.png")), key=safe_getmtime, reverse=True)
+        except Exception:
+            files = []
+
+        if not files:
+            lbl_empty = ctk.CTkLabel(self.gallery_frame, text="No screenshots found. Press F2 in-game!", text_color=TEXT_MUTED)
+            lbl_empty.pack(padx=20, pady=40)
+            return
+
+        for fpath in files:
+            fname = os.path.basename(fpath)
+            item_frame = ctk.CTkFrame(self.gallery_frame, fg_color=SURFACE, border_width=1, border_color=BORDER, width=150, height=160)
+            item_frame.pack(side="left", padx=5, pady=5)
+            item_frame.pack_propagate(False)
+
+            try:
+                pil_img = Image.open(fpath)
+                pil_img.thumbnail((130, 90))
+                ctk_img = ctk.CTkImage(light_image=pil_img, dark_image=pil_img, size=pil_img.size)
+            except Exception:
+                ctk_img = None
+
+            if ctk_img:
+                img_btn = ctk.CTkButton(
+                    item_frame, text="", image=ctk_img, fg_color="transparent", hover_color=SURFACE_HOVER,
+                    width=130, height=90, command=lambda p=fpath: self.view_screenshot_full(p)
+                )
+                img_btn.pack(padx=5, pady=(5, 2))
+            else:
+                lbl_err = ctk.CTkLabel(item_frame, text="Error loading preview", text_color=TEXT_MUTED, font=ctk.CTkFont(size=10))
+                lbl_err.pack(padx=5, pady=(30, 2))
+
+            disp_name = fname if len(fname) < 18 else fname[:15] + "..."
+            lbl_name = ctk.CTkLabel(item_frame, text=disp_name, font=ctk.CTkFont(size=9), text_color=TEXT_SECONDARY)
+            lbl_name.pack(padx=5, pady=0)
+
+            btn_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
+            btn_frame.pack(fill="x", padx=5, pady=(2, 5))
+
+            btn_view = ctk.CTkButton(
+                btn_frame, text="View", width=55, height=20, font=ctk.CTkFont(size=9, weight="bold"),
+                fg_color=SECONDARY_BUTTON, hover_color=SECONDARY_HOVER, text_color=TEXT_PRIMARY,
+                command=lambda p=fpath: self.view_screenshot_full(p)
+            )
+            btn_view.pack(side="left", padx=(0, 2))
+
+            btn_del = ctk.CTkButton(
+                btn_frame, text="Delete", width=55, height=20, font=ctk.CTkFont(size=9, weight="bold"),
+                fg_color="#C0392B", hover_color="#E74C3C", text_color="#FFFFFF",
+                command=lambda p=fpath: self.delete_screenshot(p)
+            )
+            btn_del.pack(side="right", padx=(2, 0))
+
+    def view_screenshot_full(self, fpath):
+        ScreenshotViewerDialog(self.winfo_toplevel(), fpath)
+
+    def delete_screenshot(self, fpath):
+        ans = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete this screenshot?\n\n{os.path.basename(fpath)}")
+        if ans:
+            try:
+                os.remove(fpath)
+                self.refresh_screenshots_gallery()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete file:\n{e}")
+

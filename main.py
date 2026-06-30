@@ -117,6 +117,8 @@ def main():
             pass
         sys.exit(1)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Error starting Alien Launcher: {e}")
         try:
             import tkinter as tk
