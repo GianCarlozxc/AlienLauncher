@@ -1,3 +1,5 @@
+import customtkinter as ctk
+
 ACCENT = "#2ECC71"
 ACCENT_HOVER = "#27AE60"
 ACCENT_TEXT = "#121212"
@@ -70,9 +72,12 @@ def update_list(lst, new_vals):
     lst[0] = new_vals[0]
     lst[1] = new_vals[1]
 
+CURRENT_THEME = "alien"
+
 def set_theme(theme_name):
-    global ACCENT, ACCENT_HOVER, ACCENT_TEXT
+    global ACCENT, ACCENT_HOVER, ACCENT_TEXT, CURRENT_THEME
     theme_name = theme_name.lower()
+    CURRENT_THEME = theme_name
     
     if theme_name == "unicorn":
         # Unicorn theme colors (pastels, pinks, purples)
@@ -84,18 +89,18 @@ def set_theme(theme_name):
         update_list(ACCENT_HOVER_COLOR, [ACCENT_HOVER, ACCENT_HOVER])
         update_list(ACCENT_TEXT_COLOR, ["#000000", "#1B0B22"]) # Black in light, dark purple/black in dark
         
-        update_list(APP_BG, ["#FFF0F8", "#24142C"])
-        update_list(SIDEBAR_BG, ["#FFE4F2", "#1B0B22"])
-        update_list(SURFACE, ["#FFFFFF", "#2F1A3B"])
-        update_list(SURFACE_ALT, ["#FFF5FA", "#271432"])
-        update_list(SURFACE_HOVER, ["#FFE4F2", "#3D224C"])
-        update_list(CONTROL_BG, ["#FFF8FC", "#1F0E28"])
-        update_list(CONTROL_HOVER, ["#FFD6EB", "#351A44"])
-        update_list(SECONDARY_BUTTON, ["#FFD6EB", "#3F224E"])
-        update_list(SECONDARY_HOVER, ["#FFAEDC", "#532E66"])
-        update_list(BORDER, ["#FFC2E3", "#4D235D"])
-        update_list(BORDER_DARK, ["#FFA6D8", "#3F1B4E"])
-        update_list(CARD_BORDER, ["#FFC2E3", "#4D235D"])
+        update_list(APP_BG, ["#FFF0F8", "#121212"])
+        update_list(SIDEBAR_BG, ["#FFE4F2", "#0D0D0D"])
+        update_list(SURFACE, ["#FFFFFF", "#1E1E1E"])
+        update_list(SURFACE_ALT, ["#FFF5FA", "#151515"])
+        update_list(SURFACE_HOVER, ["#FFE4F2", "#2A2A2A"])
+        update_list(CONTROL_BG, ["#FFF8FC", "#141414"])
+        update_list(CONTROL_HOVER, ["#FFD6EB", "#2D2D2D"])
+        update_list(SECONDARY_BUTTON, ["#FFD6EB", "#222222"])
+        update_list(SECONDARY_HOVER, ["#FFAEDC", "#333333"])
+        update_list(BORDER, ["#FFC2E3", "#4A203B"])
+        update_list(BORDER_DARK, ["#FFA6D8", "#2E1425"])
+        update_list(CARD_BORDER, ["#FFC2E3", "#4A203B"])
         
         update_list(TEXT_PRIMARY, ["#000000", "#FF66CC"]) # Black in light mode, pink in dark mode
         update_list(TEXT_SECONDARY, ["#000000", "#FF8AD8"]) # Black in light mode, pink in dark mode
@@ -132,6 +137,21 @@ def set_theme(theme_name):
         update_list(TEXT_DISABLED, ["#333333", "#1F9F56"])
         update_list(SUCCESS_COLOR, ["#2ECC71", "#2ECC71"])
         update_list(HIGHLIGHT_COLOR, ["#A5D6A7", "#2ECC71"])
+
+# Monkeypatch CTkFont to dynamically switch family to "Chewy" if current theme is unicorn
+original_init = ctk.CTkFont.__init__
+def new_init(self, *args, **kwargs):
+    if CURRENT_THEME == "unicorn":
+        kwargs["family"] = "Chewy"
+    original_init(self, *args, **kwargs)
+ctk.CTkFont.__init__ = new_init
+
+original_configure = ctk.CTkFont.configure
+def new_configure(self, *args, **kwargs):
+    if CURRENT_THEME == "unicorn" and "family" in kwargs:
+        kwargs["family"] = "Chewy"
+    return original_configure(self, *args, **kwargs)
+ctk.CTkFont.configure = new_configure
 
 def normalize_structural_colors(widget):
     for option in STRUCTURAL_OPTIONS + TEXT_OPTIONS:
@@ -180,3 +200,4 @@ def get_asset_path(relative_path):
     else:
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
+

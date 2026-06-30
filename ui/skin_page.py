@@ -80,7 +80,7 @@ class SkinPage(ctk.CTkFrame):
 
         self.sort_selector = ctk.CTkSegmentedButton(
             controls,
-            values=["Best", "New"],
+            values=["Best", "New", "Saved"],
             command=self.on_sort_changed,
             fg_color=CONTROL_BG,
             selected_color=ACCENT,
@@ -91,17 +91,6 @@ class SkinPage(ctk.CTkFrame):
         self.sort_selector.set("Best")
         self.sort_selector.grid(row=0, column=0, sticky="w")
 
-        self.save_skin_btn = ctk.CTkButton(
-            controls,
-            text="Save Skin",
-            width=110,
-            fg_color=ACCENT,
-            hover_color=ACCENT_HOVER,
-            text_color=ACCENT_TEXT,
-            font=ctk.CTkFont(weight="bold"),
-            command=self.save_current_skin
-        )
-        self.save_skin_btn.grid(row=0, column=1, padx=(10, 0), sticky="w")
 
         self.refresh_btn = ctk.CTkButton(
             controls,
@@ -132,7 +121,7 @@ class SkinPage(ctk.CTkFrame):
         normalize_structural_colors(self)
 
     def on_sort_changed(self, value):
-        self.current_sort = "time" if value == "New" else "best"
+        self.current_sort = "time" if value == "New" else ("saved" if value == "Saved" else "best")
         self.load_catalog(reset=True)
 
     def load_profile_skin(self):
@@ -161,6 +150,12 @@ class SkinPage(ctk.CTkFrame):
                         img = Image.open(io.BytesIO(res.content)).convert("RGBA")
                         if img.width >= 64 and img.height >= 32:
                             self.current_skin_image = img
+                            self.current_skin_data = {
+                                "id": equipped.get("id") or f"custom_{username.lower()}",
+                                "tags": ["Current Skin"],
+                                "skin_url": url,
+                                "is_slim": equipped.get("is_slim", False)
+                            }
                             preview = self.render_skin_front(img, scale=5)
                             status_text = "Showing your equipped skin." if (equipped_url and url == equipped_url) else "Showing your current username skin."
                             self.run_in_gui(self.set_profile_preview, preview, status_text)
@@ -192,8 +187,12 @@ class SkinPage(ctk.CTkFrame):
 
         def _thread():
             try:
-                skins, last_page = self.fetch_ely_skins(self.current_page, self.current_sort)
-                self.run_in_gui(self.display_skins, skins, last_page)
+                if self.current_sort == "saved":
+                    saved_skins = self.config_manager.get("saved_skins", [])
+                    self.run_in_gui(self.display_saved_skins, saved_skins)
+                else:
+                    skins, last_page = self.fetch_ely_skins(self.current_page, self.current_sort)
+                    self.run_in_gui(self.display_skins, skins, last_page)
             except Exception as e:
                 self.run_in_gui(self.show_error, str(e))
 
@@ -269,15 +268,38 @@ class SkinPage(ctk.CTkFrame):
         except Exception:
             pass
 
-    def add_skin_card(self, skin, index):
+    def display_saved_skins(self, skins):
+        try:
+            if not self.winfo_exists() or not self.gallery.winfo_exists():
+                return
+        except Exception:
+            return
+
+        start_index = len(self.gallery.winfo_children())
+        if not skins and start_index == 0:
+            ctk.CTkLabel(
+                self.gallery,
+                text="No saved skins found.",
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color=TEXT_PRIMARY
+            ).grid(row=0, column=0, padx=15, pady=30)
+
+        for idx, skin in enumerate(skins):
+            self.add_skin_card(skin, idx, is_saved_view=True)
+
+        self.loading = False
+        self.load_more_btn.configure(state="disabled", text="No More Skins")
+
+    def add_skin_card(self, skin, index, is_saved_view=False):
         row = index // 4
         col = index % 4
         card = ctk.CTkFrame(self.gallery, fg_color=SURFACE, border_width=1, border_color=CARD_BORDER, corner_radius=6)
         card.grid(row=row, column=col, padx=8, pady=8, sticky="nsew")
-        card.grid_columnconfigure(0, weight=1)
+        card.grid_columnconfigure(0, weight=2)
+        card.grid_columnconfigure(1, weight=1)
 
         preview = ctk.CTkLabel(card, text="Loading...", width=120, height=180)
-        preview.grid(row=0, column=0, padx=10, pady=(10, 5))
+        preview.grid(row=0, column=0, padx=10, pady=(10, 5), columnspan=2)
 
         tags = skin.get("tags") or []
         title = ", ".join(tags[:2]) if tags else f"Skin #{skin.get('id', '?')}"
@@ -288,7 +310,7 @@ class SkinPage(ctk.CTkFrame):
             text=title,
             font=ctk.CTkFont(size=12, weight="bold"),
             text_color=TEXT_PRIMARY
-        ).grid(row=1, column=0, padx=10, pady=(0, 3), sticky="w")
+        ).grid(row=1, column=0, padx=10, pady=(0, 3), sticky="w", columnspan=2)
 
         stats = f"Views {self.short_number(skin.get('count_views_total', 0))} | Worn {self.short_number(skin.get('count_wearers', 0))}"
         ctk.CTkLabel(
@@ -296,19 +318,46 @@ class SkinPage(ctk.CTkFrame):
             text=stats,
             font=ctk.CTkFont(size=10),
             text_color=TEXT_PRIMARY
-        ).grid(row=2, column=0, padx=10, pady=(0, 8), sticky="w")
+        ).grid(row=2, column=0, padx=10, pady=(0, 8), sticky="w", columnspan=2)
 
         is_equipped = self.equipped_skin_id == skin.get("id")
         equip_btn = ctk.CTkButton(
             card,
-            text="Equipped" if is_equipped else "Equip Skin",
+            text="Equipped" if is_equipped else "Equip",
             height=28,
             fg_color=ACCENT if is_equipped else SECONDARY_BUTTON,
             hover_color=ACCENT_HOVER if is_equipped else SECONDARY_HOVER,
             text_color=ACCENT_TEXT if is_equipped else TEXT_PRIMARY,
             command=lambda s=skin: self.equip_skin(s)
         )
-        equip_btn.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+        equip_btn.grid(row=3, column=0, padx=(10, 2), pady=(0, 10), sticky="ew")
+
+        saved_list = self.config_manager.get("saved_skins", [])
+        is_saved = any(str(s.get("id")) == str(skin.get("id")) for s in saved_list)
+
+        if is_saved_view or is_saved:
+            action_btn = ctk.CTkButton(
+                card,
+                text="Remove",
+                height=28,
+                width=60,
+                fg_color="#D32F2F",
+                hover_color="#B71C1C",
+                text_color="#FFFFFF",
+                command=lambda s=skin: self.remove_saved_skin(s)
+            )
+        else:
+            action_btn = ctk.CTkButton(
+                card,
+                text="Save",
+                height=28,
+                width=60,
+                fg_color=SECONDARY_BUTTON,
+                hover_color=SECONDARY_HOVER,
+                text_color=TEXT_PRIMARY,
+                command=lambda s=skin: self.save_skin_to_list(s)
+            )
+        action_btn.grid(row=3, column=1, padx=(2, 10), sticky="ew")
 
         self.load_skin_preview_async(skin.get("skin_url"), preview)
 
@@ -509,22 +558,41 @@ class SkinPage(ctk.CTkFrame):
         self.load_profile_skin()
         self.load_catalog(reset=True)
 
-    def save_current_skin(self):
-        if not hasattr(self, "current_skin_image") or not self.current_skin_image:
-            messagebox.showerror("Save Skin Error", "No skin loaded to save yet.", parent=self.toplevel)
+
+    def save_skin_to_list(self, skin):
+        saved_skins = self.config_manager.get("saved_skins", [])
+        if not isinstance(saved_skins, list):
+            saved_skins = []
+
+        # Check if already exists
+        if any(str(s.get("id")) == str(skin.get("id")) for s in saved_skins):
+            messagebox.showinfo("Already Saved", "This skin is already in your saved list.", parent=self.toplevel)
             return
-            
-        username = self.config_manager.get("username", "AlienPlayer")
-        path = filedialog.asksaveasfilename(
-            title="Save Skin",
-            initialfile=f"{username}_skin.png",
-            defaultextension=".png",
-            filetypes=[("PNG Image", "*.png")],
-            parent=self.toplevel
-        )
-        if path:
-            try:
-                self.current_skin_image.save(path)
-                messagebox.showinfo("Success", f"Skin successfully saved to:\n{path}", parent=self.toplevel)
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save skin:\n{e}", parent=self.toplevel)
+
+        skin_copy = {
+            "id": skin.get("id"),
+            "tags": skin.get("tags") or [f"Skin #{skin.get('id')}"],
+            "skin_url": skin.get("skin_url"),
+            "is_slim": skin.get("is_slim", False),
+            "count_views_total": skin.get("count_views_total", 0),
+            "count_wearers": skin.get("count_wearers", 0)
+        }
+        saved_skins.append(skin_copy)
+        self.config_manager.set("saved_skins", saved_skins)
+        messagebox.showinfo("Saved", "Skin successfully added to your Saved list!", parent=self.toplevel)
+        self.load_catalog(reset=True)
+
+    def remove_saved_skin(self, skin):
+        saved_skins = self.config_manager.get("saved_skins", [])
+        if not isinstance(saved_skins, list):
+            saved_skins = []
+
+        original_len = len(saved_skins)
+        saved_skins = [s for s in saved_skins if str(s.get("id")) != str(skin.get("id"))]
+        
+        if len(saved_skins) < original_len:
+            self.config_manager.set("saved_skins", saved_skins)
+            messagebox.showinfo("Removed", "Skin removed from your Saved list.", parent=self.toplevel)
+            self.load_catalog(reset=True)
+        else:
+            messagebox.showerror("Error", "Skin not found in your Saved list.", parent=self.toplevel)

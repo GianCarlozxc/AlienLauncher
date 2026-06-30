@@ -43,8 +43,9 @@ class LauncherWindow(ctk.CTk):
         # Load configurations
         self.config_manager = ConfigManager()
         
-        # Setup Alien Font (Orbitron)
+        # Setup Fonts (Orbitron and Chewy)
         self.setup_alien_font()
+        self.setup_chewy_font()
         
         # Apply theme settings immediately
         saved_style = self.config_manager.get("launcher_style", "alien").lower()
@@ -473,6 +474,25 @@ class LauncherWindow(ctk.CTk):
                 ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
             except Exception as e:
                 print(f"Failed to load Orbitron font: {e}")
+
+    def setup_chewy_font(self):
+        from ui.theme import get_asset_path
+        font_path = get_asset_path("assets/Chewy.ttf")
+        if not os.path.exists(font_path):
+            try:
+                import urllib.request
+                url = "https://github.com/google/fonts/raw/main/ofl/chewy/Chewy-Regular.ttf"
+                urllib.request.urlretrieve(url, font_path)
+            except Exception as e:
+                print(f"Failed to download Chewy font: {e}")
+                
+        if os.path.exists(font_path):
+            try:
+                import ctypes
+                ctypes.windll.gdi32.AddFontResourceW(font_path)
+                ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
+            except Exception as e:
+                print(f"Failed to load Chewy font: {e}")
 
     def fallback_logo(self):
         self.logo_label = ctk.CTkLabel(
