@@ -71,7 +71,13 @@ class TailscaleManager:
         # Runs 'tailscale status'
         success, output = self.run_command(["status"])
         if success:
-            return output
+            formatted_lines = []
+            for line in output.splitlines():
+                stripped = line.rstrip()
+                if stripped.endswith("-") and len(stripped) > 1 and stripped[-2] in (' ', '\t'):
+                    line = stripped[:-1] + "online"
+                formatted_lines.append(line)
+            return "\n".join(formatted_lines)
         # If offline or not running
         if "Tailscale is stopped" in output or "not running" in output.lower():
             return "Tailscale is stopped. Click 'Tailscale Up' to start."
