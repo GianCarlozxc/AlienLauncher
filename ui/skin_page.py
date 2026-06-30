@@ -7,6 +7,7 @@ import threading
 import customtkinter as ctk
 import requests
 from PIL import Image
+from tkinter import filedialog
 import ui.custom_dialog as messagebox
 
 from ui.theme import (
@@ -73,7 +74,9 @@ class SkinPage(ctk.CTkFrame):
 
         controls = ctk.CTkFrame(self, fg_color="transparent")
         controls.grid(row=2, column=0, padx=20, pady=(0, 10), sticky="ew")
-        controls.grid_columnconfigure(0, weight=1)
+        controls.grid_columnconfigure(0, weight=0)
+        controls.grid_columnconfigure(1, weight=1)
+        controls.grid_columnconfigure(2, weight=0)
 
         self.sort_selector = ctk.CTkSegmentedButton(
             controls,
@@ -88,6 +91,18 @@ class SkinPage(ctk.CTkFrame):
         self.sort_selector.set("Best")
         self.sort_selector.grid(row=0, column=0, sticky="w")
 
+        self.save_skin_btn = ctk.CTkButton(
+            controls,
+            text="Save Skin",
+            width=110,
+            fg_color=ACCENT,
+            hover_color=ACCENT_HOVER,
+            text_color=ACCENT_TEXT,
+            font=ctk.CTkFont(weight="bold"),
+            command=self.save_current_skin
+        )
+        self.save_skin_btn.grid(row=0, column=1, padx=(10, 0), sticky="w")
+
         self.refresh_btn = ctk.CTkButton(
             controls,
             text="Refresh",
@@ -97,7 +112,7 @@ class SkinPage(ctk.CTkFrame):
             text_color=TEXT_PRIMARY,
             command=lambda: self.load_catalog(reset=True)
         )
-        self.refresh_btn.grid(row=0, column=1, padx=(10, 0), sticky="e")
+        self.refresh_btn.grid(row=0, column=2, padx=(10, 0), sticky="e")
 
         self.gallery = ctk.CTkScrollableFrame(self, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
         self.gallery.grid(row=3, column=0, padx=20, pady=(0, 10), sticky="nsew")
@@ -145,6 +160,7 @@ class SkinPage(ctk.CTkFrame):
                     if res.status_code == 200 and res.content:
                         img = Image.open(io.BytesIO(res.content)).convert("RGBA")
                         if img.width >= 64 and img.height >= 32:
+                            self.current_skin_image = img
                             preview = self.render_skin_front(img, scale=5)
                             status_text = "Showing your equipped skin." if (equipped_url and url == equipped_url) else "Showing your current username skin."
                             self.run_in_gui(self.set_profile_preview, preview, status_text)
@@ -394,6 +410,7 @@ class SkinPage(ctk.CTkFrame):
         res = requests.get(skin_url, headers={"User-Agent": "Alien Launcher"}, timeout=15)
         res.raise_for_status()
         texture = Image.open(io.BytesIO(res.content)).convert("RGBA")
+        self.current_skin_image = texture
         preview = self.render_skin_front(texture, scale=5)
         self.run_in_gui(self.set_profile_preview, preview, "Showing the skin you equipped from Ely.by.")
 
@@ -491,3 +508,23 @@ class SkinPage(ctk.CTkFrame):
     def refresh(self):
         self.load_profile_skin()
         self.load_catalog(reset=True)
+
+    def save_current_skin(self):
+        if not hasattr(self, "current_skin_image") or not self.current_skin_image:
+            messagebox.showerror("Save Skin Error", "No skin loaded to save yet.", parent=self.toplevel)
+            return
+            
+        username = self.config_manager.get("username", "AlienPlayer")
+        path = filedialog.asksaveasfilename(
+            title="Save Skin",
+            initialfile=f"{username}_skin.png",
+            defaultextension=".png",
+            filetypes=[("PNG Image", "*.png")],
+            parent=self.toplevel
+        )
+        if path:
+            try:
+                self.current_skin_image.save(path)
+                messagebox.showinfo("Success", f"Skin successfully saved to:\n{path}", parent=self.toplevel)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save skin:\n{e}", parent=self.toplevel)
