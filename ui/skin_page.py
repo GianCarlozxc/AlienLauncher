@@ -25,6 +25,7 @@ class SkinPage(ctk.CTkFrame):
         self.current_sort = "best"
         self.current_page = 1
         self.loading = False
+        self.request_counter = 0
         self.equipped_skin_id = self.get_equipped_skin_id()
         self.skin_images = []
         self.skin_cache_dir = os.path.join(self.config_manager.get_minecraft_folder(), "skin_cache")
@@ -174,16 +175,20 @@ class SkinPage(ctk.CTkFrame):
         self.profile_status.configure(text=status)
 
     def load_catalog(self, reset=False):
-        if self.loading:
-            return
-        self.loading = True
         if reset:
             self.current_page = 1
+            self.request_counter += 1
             for widget in self.gallery.winfo_children():
                 widget.destroy()
             self.skin_images.clear()
+            self.loading = False
+        elif self.loading:
+            return
 
+        self.loading = True
         self.load_more_btn.configure(state="disabled", text="Loading Ely.by skins...")
+
+        req_id = self.request_counter
 
         def _thread():
             try:
@@ -196,12 +201,15 @@ class SkinPage(ctk.CTkFrame):
                         else:
                             all_saved = {}
                     saved_skins = all_saved.get(username, [])
-                    self.run_in_gui(self.display_saved_skins, saved_skins)
+                    if req_id == self.request_counter:
+                        self.run_in_gui(self.display_saved_skins, saved_skins, req_id)
                 else:
                     skins, last_page = self.fetch_ely_skins(self.current_page, self.current_sort)
-                    self.run_in_gui(self.display_skins, skins, last_page)
+                    if req_id == self.request_counter:
+                        self.run_in_gui(self.display_skins, skins, last_page, req_id)
             except Exception as e:
-                self.run_in_gui(self.show_error, str(e))
+                if req_id == self.request_counter:
+                    self.run_in_gui(self.show_error, str(e))
 
         threading.Thread(target=_thread, daemon=True).start()
 
@@ -227,7 +235,9 @@ class SkinPage(ctk.CTkFrame):
         data = json.loads(match.group(1))
         return data.get("items", []), int(data.get("last", page))
 
-    def display_skins(self, skins, last_page):
+    def display_skins(self, skins, last_page, req_id):
+        if req_id != self.request_counter:
+            return
         try:
             if not self.winfo_exists() or not self.gallery.winfo_exists():
                 return
@@ -275,7 +285,9 @@ class SkinPage(ctk.CTkFrame):
         except Exception:
             pass
 
-    def display_saved_skins(self, skins):
+    def display_saved_skins(self, skins, req_id):
+        if req_id != self.request_counter:
+            return
         try:
             if not self.winfo_exists() or not self.gallery.winfo_exists():
                 return
