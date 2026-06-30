@@ -92,6 +92,17 @@ class SkinPage(ctk.CTkFrame):
         self.sort_selector.set("Best")
         self.sort_selector.grid(row=0, column=0, sticky="w")
 
+        self.search_entry = ctk.CTkEntry(
+            controls,
+            placeholder_text="Search username or saved...",
+            width=220,
+            fg_color=CONTROL_BG,
+            border_color=BORDER,
+            text_color=TEXT_PRIMARY
+        )
+        self.search_entry.grid(row=0, column=1, padx=(15, 0), sticky="w")
+        self.search_entry.bind("<Return>", lambda e: self.on_search_triggered())
+
 
         self.refresh_btn = ctk.CTkButton(
             controls,
@@ -186,8 +197,9 @@ class SkinPage(ctk.CTkFrame):
             return
 
         self.loading = True
-        self.load_more_btn.configure(state="disabled", text="Loading Ely.by skins...")
+        self.load_more_btn.configure(state="disabled", text="Loading skins...")
 
+        query = self.search_entry.get().strip()
         req_id = self.request_counter
 
         def _thread():
@@ -201,12 +213,22 @@ class SkinPage(ctk.CTkFrame):
                         else:
                             all_saved = {}
                     saved_skins = all_saved.get(username, [])
+                    if query:
+                        saved_skins = [
+                            s for s in saved_skins
+                            if query.lower() in str(s.get("id")).lower() or any(query.lower() in tag.lower() for tag in s.get("tags", []))
+                        ]
                     if req_id == self.request_counter:
                         self.run_in_gui(self.display_saved_skins, saved_skins, req_id)
                 else:
-                    skins, last_page = self.fetch_ely_skins(self.current_page, self.current_sort)
-                    if req_id == self.request_counter:
-                        self.run_in_gui(self.display_skins, skins, last_page, req_id)
+                    if query:
+                        skins = self.fetch_skin_by_username(query)
+                        if req_id == self.request_counter:
+                            self.run_in_gui(self.display_skins, skins, 1, req_id)
+                    else:
+                        skins, last_page = self.fetch_ely_skins(self.current_page, self.current_sort)
+                        if req_id == self.request_counter:
+                            self.run_in_gui(self.display_skins, skins, last_page, req_id)
             except Exception as e:
                 if req_id == self.request_counter:
                     self.run_in_gui(self.show_error, str(e))
@@ -640,3 +662,29 @@ class SkinPage(ctk.CTkFrame):
             self.load_catalog(reset=True)
         else:
             messagebox.showerror("Error", "Skin not found in your Saved list.", parent=self.toplevel)
+
+    def on_search_triggered(self):
+        self.load_catalog(reset=True)
+
+    def fetch_skin_by_username(self, username):
+        urls = [
+            f"https://ely.by/services/skins/{username}.png",
+            f"https://minotar.net/skin/{username}"
+        ]
+        for url in urls:
+            try:
+                res = requests.get(url, headers={"User-Agent": "Alien Launcher"}, timeout=8)
+                if res.status_code == 200 and res.content:
+                    img = Image.open(io.BytesIO(res.content)).convert("RGBA")
+                    if img.width >= 64 and img.height >= 32:
+                        return [{
+                            "id": f"search_{username.lower()}",
+                            "tags": [username, "Search Result"],
+                            "skin_url": url,
+                            "is_slim": False,
+                            "count_views_total": 0,
+                            "count_wearers": 0
+                        }]
+            except Exception:
+                pass
+        raise ValueError(f"Could not find skin for username '{username}'.")
