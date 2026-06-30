@@ -13,7 +13,7 @@ import ui.custom_dialog as messagebox
 from ui.theme import (
     ACCENT, ACCENT_HOVER, ACCENT_TEXT, BORDER, CARD_BORDER, CONTROL_BG,
     CONTROL_HOVER, SECONDARY_BUTTON, SECONDARY_HOVER, SURFACE, SURFACE_ALT,
-    TEXT_PRIMARY, normalize_structural_colors
+    TEXT_PRIMARY, TEXT_MUTED, normalize_structural_colors
 )
 
 
@@ -99,11 +99,12 @@ class SkinPage(ctk.CTkFrame):
             fg_color=CONTROL_BG,
             border_color=BORDER,
             text_color=TEXT_PRIMARY,
-            placeholder_text_color=TEXT_MUTED,
-            focused_border_color=ACCENT
+            placeholder_text_color=TEXT_MUTED
         )
         self.search_entry.grid(row=0, column=1, padx=(15, 0), sticky="w")
         self.search_entry.bind("<Return>", lambda e: self.on_search_triggered())
+        self.search_entry.bind("<FocusIn>", lambda e: self.search_entry.configure(border_color=ACCENT))
+        self.search_entry.bind("<FocusOut>", lambda e: self.search_entry.configure(border_color=BORDER))
 
 
         self.refresh_btn = ctk.CTkButton(
