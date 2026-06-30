@@ -1,5 +1,5 @@
 {
-    "version": "1.3.4",
-    "changelog": "feat: Add mod image support to downloaded mods list",
-    "download_url": "https://github.com/GianCarlozxc/AlienLauncher/releases/download/v1.3.4/Alien.Launcher.exe"
+    "version": "1.3.5",
+    "changelog": "update: tailscale auth key",
+    "download_url": "https://github.com/GianCarlozxc/AlienLauncher/releases/download/v1.3.5/Alien.Launcher.exe"
 }
