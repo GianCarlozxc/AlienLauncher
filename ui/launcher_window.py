@@ -481,7 +481,7 @@ class LauncherWindow(ctk.CTk):
         if not os.path.exists(font_path):
             try:
                 import urllib.request
-                url = "https://github.com/google/fonts/raw/main/ofl/chewy/Chewy-Regular.ttf"
+                url = "https://fonts.gstatic.com/s/chewy/v18/uK_94ruUb-k-wk5x.ttf"
                 urllib.request.urlretrieve(url, font_path)
             except Exception as e:
                 print(f"Failed to download Chewy font: {e}")
