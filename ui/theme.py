@@ -138,6 +138,26 @@ def set_theme(theme_name):
         update_list(SUCCESS_COLOR, ["#2ECC71", "#2ECC71"])
         update_list(HIGHLIGHT_COLOR, ["#A5D6A7", "#2ECC71"])
 
+    # Update other modules in the ui package that imported ACCENT, ACCENT_HOVER, or ACCENT_TEXT directly
+    import sys
+    for mod_name, mod in list(sys.modules.items()):
+        if mod and mod_name.startswith("ui."):
+            if hasattr(mod, "ACCENT") and mod_name != "ui.theme":
+                try:
+                    mod.ACCENT = ACCENT
+                except Exception:
+                    pass
+            if hasattr(mod, "ACCENT_HOVER") and mod_name != "ui.theme":
+                try:
+                    mod.ACCENT_HOVER = ACCENT_HOVER
+                except Exception:
+                    pass
+            if hasattr(mod, "ACCENT_TEXT") and mod_name != "ui.theme":
+                try:
+                    mod.ACCENT_TEXT = ACCENT_TEXT
+                except Exception:
+                    pass
+
 # Monkeypatch CTkFont to dynamically switch family to "Chewy" if current theme is unicorn
 original_init = ctk.CTkFont.__init__
 def new_init(self, *args, **kwargs):
