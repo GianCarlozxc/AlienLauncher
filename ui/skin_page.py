@@ -188,7 +188,14 @@ class SkinPage(ctk.CTkFrame):
         def _thread():
             try:
                 if self.current_sort == "saved":
-                    saved_skins = self.config_manager.get("saved_skins", [])
+                    username = self.config_manager.get("username", "AlienPlayer")
+                    all_saved = self.config_manager.get("saved_skins", {})
+                    if not isinstance(all_saved, dict):
+                        if isinstance(all_saved, list):
+                            all_saved = {username: all_saved}
+                        else:
+                            all_saved = {}
+                    saved_skins = all_saved.get(username, [])
                     self.run_in_gui(self.display_saved_skins, saved_skins)
                 else:
                     skins, last_page = self.fetch_ely_skins(self.current_page, self.current_sort)
@@ -332,7 +339,14 @@ class SkinPage(ctk.CTkFrame):
         )
         equip_btn.grid(row=3, column=0, padx=(10, 2), pady=(0, 10), sticky="ew")
 
-        saved_list = self.config_manager.get("saved_skins", [])
+        username = self.config_manager.get("username", "AlienPlayer")
+        all_saved = self.config_manager.get("saved_skins", {})
+        if isinstance(all_saved, dict):
+            saved_list = all_saved.get(username, [])
+        elif isinstance(all_saved, list):
+            saved_list = all_saved
+        else:
+            saved_list = []
         is_saved = any(str(s.get("id")) == str(skin.get("id")) for s in saved_list)
 
         if is_saved_view or is_saved:
@@ -560,7 +574,15 @@ class SkinPage(ctk.CTkFrame):
 
 
     def save_skin_to_list(self, skin):
-        saved_skins = self.config_manager.get("saved_skins", [])
+        username = self.config_manager.get("username", "AlienPlayer")
+        all_saved = self.config_manager.get("saved_skins", {})
+        if not isinstance(all_saved, dict):
+            if isinstance(all_saved, list):
+                all_saved = {username: all_saved}
+            else:
+                all_saved = {}
+
+        saved_skins = all_saved.get(username, [])
         if not isinstance(saved_skins, list):
             saved_skins = []
 
@@ -578,12 +600,21 @@ class SkinPage(ctk.CTkFrame):
             "count_wearers": skin.get("count_wearers", 0)
         }
         saved_skins.append(skin_copy)
-        self.config_manager.set("saved_skins", saved_skins)
+        all_saved[username] = saved_skins
+        self.config_manager.set("saved_skins", all_saved)
         messagebox.showinfo("Saved", "Skin successfully added to your Saved list!", parent=self.toplevel)
         self.load_catalog(reset=True)
 
     def remove_saved_skin(self, skin):
-        saved_skins = self.config_manager.get("saved_skins", [])
+        username = self.config_manager.get("username", "AlienPlayer")
+        all_saved = self.config_manager.get("saved_skins", {})
+        if not isinstance(all_saved, dict):
+            if isinstance(all_saved, list):
+                all_saved = {username: all_saved}
+            else:
+                all_saved = {}
+
+        saved_skins = all_saved.get(username, [])
         if not isinstance(saved_skins, list):
             saved_skins = []
 
@@ -591,7 +622,8 @@ class SkinPage(ctk.CTkFrame):
         saved_skins = [s for s in saved_skins if str(s.get("id")) != str(skin.get("id"))]
         
         if len(saved_skins) < original_len:
-            self.config_manager.set("saved_skins", saved_skins)
+            all_saved[username] = saved_skins
+            self.config_manager.set("saved_skins", all_saved)
             messagebox.showinfo("Removed", "Skin removed from your Saved list.", parent=self.toplevel)
             self.load_catalog(reset=True)
         else:
