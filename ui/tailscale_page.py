@@ -244,6 +244,40 @@ class TailscalePage(ctk.CTkFrame):
             self.textbox.configure(state="disabled")
             self.textbox.see("end")
 
+    def _update_log(self, text):
+        self.textbox.configure(state="normal")
+        self.textbox.insert("end", text)
+        self.textbox.configure(state="disabled")
+        self.textbox.see("end")
+
     def action_download_tailscale(self):
-        import webbrowser
-        webbrowser.open("https://tailscale.com/download")
+        self.textbox.configure(state="normal")
+        self.textbox.delete("1.0", "end")
+        self.textbox.insert("1.0", "Preparing to download Tailscale installer...\n")
+        self.textbox.configure(state="disabled")
+        
+        self.btn_download.configure(state="disabled", text="Downloading...")
+        
+        def _run_download():
+            import urllib.request
+            import tempfile
+            
+            url = "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe"
+            temp_dir = tempfile.gettempdir()
+            installer_path = os.path.join(temp_dir, "tailscale-setup.exe")
+            
+            try:
+                self.run_in_gui(self._update_log, "Downloading installer from official servers...\n")
+                urllib.request.urlretrieve(url, installer_path)
+                self.run_in_gui(self._update_log, "Download complete! Launching installer...\n(Please accept the Windows UAC permission prompt to install)\n")
+                os.startfile(installer_path)
+            except Exception as e:
+                self.run_in_gui(self._update_log, f"Failed to download or run installer: {str(e)}\n")
+            finally:
+                def _reset_btn():
+                    self.btn_download.configure(state="normal", text="Download Tailscale")
+                    self.refresh_status()
+                self.run_in_gui(_reset_btn)
+
+        threading.Thread(target=_run_download, daemon=True).start()
+
