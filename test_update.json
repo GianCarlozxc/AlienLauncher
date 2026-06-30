@@ -1,5 +1,5 @@
 {
-    "version": "1.3.0",
-    "changelog": "Release v1.3.0",
+    "version": "1.3.4",
+    "changelog": "feat: Add mod image support to downloaded mods list",
     "download_url": "C:\\Users\\Administrator\\Desktop\\Minecraft Launcher\\dist\\Alien Launcher.exe"
 }
