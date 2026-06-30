@@ -89,6 +89,13 @@ class TailscalePage(ctk.CTkFrame):
         )
         self.btn_up.pack(side="left", padx=(0, 10), pady=5)
 
+        self.btn_down = ctk.CTkButton(
+            buttons_container, text="Tailscale Down", 
+            fg_color="#C0392B", hover_color="#962D22", text_color="#FFFFFF",
+            font=ctk.CTkFont(weight="bold"), command=self.action_down
+        )
+        self.btn_down.pack(side="left", padx=10, pady=5)
+
         self.btn_status = ctk.CTkButton(
             buttons_container, text="Check Status", 
             fg_color="#2C2C2C", hover_color="#3A3A3A", text_color="#FFFFFF",
@@ -102,6 +109,13 @@ class TailscalePage(ctk.CTkFrame):
             command=self.action_copy_ip
         )
         self.btn_copy.pack(side="left", padx=10, pady=5)
+
+        self.btn_download = ctk.CTkButton(
+            buttons_container, text="Download Tailscale", 
+            fg_color="#3498DB", hover_color="#2980B9", text_color="#FFFFFF",
+            font=ctk.CTkFont(weight="bold"),
+            command=self.action_download_tailscale
+        )
 
         # Status output window
         output_title = ctk.CTkLabel(self, text="Console Output (tailscale status)", font=ctk.CTkFont(weight="bold", size=13))
@@ -168,6 +182,11 @@ class TailscalePage(ctk.CTkFrame):
         self.textbox.insert("1.0", status_output)
         self.textbox.configure(state="disabled")
 
+        if not is_installed:
+            self.btn_download.pack(side="left", padx=10, pady=5)
+        else:
+            self.btn_download.pack_forget()
+
     def action_up(self):
         self.textbox.configure(state="normal")
         self.textbox.delete("1.0", "end")
@@ -190,6 +209,28 @@ class TailscalePage(ctk.CTkFrame):
 
         threading.Thread(target=_run_up, daemon=True).start()
 
+    def action_down(self):
+        self.textbox.configure(state="normal")
+        self.textbox.delete("1.0", "end")
+        self.textbox.insert("1.0", "Executing 'tailscale down'...\n")
+        self.textbox.configure(state="disabled")
+        
+        def _run_down():
+            success, output = self.tailscale_manager.down()
+            self.run_in_gui(self.refresh_status)
+            
+            def _log():
+                self.textbox.configure(state="normal")
+                if success:
+                    self.textbox.insert("end", "\nTailscale disconnected successfully!")
+                else:
+                    self.textbox.insert("end", f"\nFailed to disconnect Tailscale: {output}")
+                self.textbox.configure(state="disabled")
+                
+            self.run_in_gui(_log)
+
+        threading.Thread(target=_run_down, daemon=True).start()
+
     def action_status(self):
         self.refresh_status()
 
@@ -202,3 +243,7 @@ class TailscalePage(ctk.CTkFrame):
             self.textbox.insert("end", f"\n[System] Copied Tailscale IP to clipboard: {ip}\n")
             self.textbox.configure(state="disabled")
             self.textbox.see("end")
+
+    def action_download_tailscale(self):
+        import webbrowser
+        webbrowser.open("https://tailscale.com/download")

@@ -90,3 +90,9 @@ class TailscaleManager:
         # We can run it in the background or with a timeout.
         success, output = self.run_command(["up"])
         return success, output
+
+    def down(self):
+        # Runs 'tailscale down'
+        success, output = self.run_command(["down"])
+        return success, output
+
