@@ -98,7 +98,9 @@ class SkinPage(ctk.CTkFrame):
             width=220,
             fg_color=CONTROL_BG,
             border_color=BORDER,
-            text_color=TEXT_PRIMARY
+            text_color=TEXT_PRIMARY,
+            placeholder_text_color=TEXT_MUTED,
+            focused_border_color=ACCENT
         )
         self.search_entry.grid(row=0, column=1, padx=(15, 0), sticky="w")
         self.search_entry.bind("<Return>", lambda e: self.on_search_triggered())
