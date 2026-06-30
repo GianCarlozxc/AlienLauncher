@@ -179,10 +179,16 @@ class CustomDialog(ctk.CTkToplevel):
 
 def get_parent_window(parent=None):
     if parent and parent.winfo_exists():
-        return parent
+        try:
+            return parent.winfo_toplevel()
+        except Exception:
+            return parent
     try:
         # Find active CTk root
         if ctk.CTk._top_level_windows:
+            for w in ctk.CTk._top_level_windows:
+                if w.winfo_exists() and w.winfo_viewable():
+                    return w
             for w in ctk.CTk._top_level_windows:
                 if w.winfo_exists():
                     return w

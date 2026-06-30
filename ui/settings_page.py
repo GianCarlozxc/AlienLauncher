@@ -732,7 +732,7 @@ class SettingsPage(ctk.CTkFrame):
             self.on_account_type_change("Offline")
             if hasattr(self.toplevel, "update_sidebar_profile"):
                 self.toplevel.update_sidebar_profile()
-            messagebox.showinfo("Logged Out", "Successfully logged out from Ely.by Account.")
+            messagebox.showinfo("Logged Out", "Successfully logged out from Ely.by Account.", parent=self)
         else:
             dialog = ElyByLoginDialog(self, self.minecraft_manager, self.on_elyby_login_success)
 
@@ -762,7 +762,7 @@ class SettingsPage(ctk.CTkFrame):
             self.on_account_type_change("Offline")
             if hasattr(self.toplevel, "update_sidebar_profile"):
                 self.toplevel.update_sidebar_profile()
-            messagebox.showinfo("Logged Out", "Successfully logged out from Microsoft Account.")
+            messagebox.showinfo("Logged Out", "Successfully logged out from Microsoft Account.", parent=self)
         else:
             # Open Dialog
             dialog = MicrosoftLoginDialog(self, self.minecraft_manager, self.on_ms_login_success)
