@@ -310,7 +310,88 @@ class MinecraftManager:
             "setMax": set_max
         }
 
+        # Paths for version json validation and cleanup
+        version_json_path = os.path.join(mc_dir, "versions", version_id, f"{version_id}.json")
+
         try:
+            # 1. Clean up invalid/empty version json if it exists
+            if os.path.exists(version_json_path):
+                should_delete = False
+                if os.path.getsize(version_json_path) == 0:
+                    should_delete = True
+                else:
+                    try:
+                        import json
+                        with open(version_json_path, "r", encoding="utf-8") as f:
+                            json.load(f)
+                    except Exception:
+                        should_delete = True
+                if should_delete:
+                    try:
+                        os.remove(version_json_path)
+                        print(f"Removed invalid/empty json: {version_json_path}")
+                    except Exception as err:
+                        print(f"Failed to remove invalid json: {err}")
+
+            # 2. Try to pre-download version json using requests (more robust with customized User-Agent)
+            if not os.path.exists(version_json_path):
+                try:
+                    import requests
+                    import json
+                    set_status(f"Downloading version manifest for {version_id}...")
+                    url = None
+                    # Get the URL from online versions cache
+                    if not self._online_versions_cache:
+                        try:
+                            self._online_versions_cache = minecraft_launcher_lib.utils.get_version_list()
+                        except Exception:
+                            pass
+                    
+                    if self._online_versions_cache:
+                        for v in self._online_versions_cache:
+                            if v.get("id") == version_id:
+                                url = v.get("url")
+                                break
+                    
+                    # If not found in cache, search in local fallback manifest
+                    if not url:
+                        try:
+                            if getattr(sys, 'frozen', False):
+                                base_path = sys._MEIPASS
+                            else:
+                                base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                            cache_path = os.path.join(base_path, "assets", "version_manifest_v2.json")
+                            if os.path.exists(cache_path):
+                                with open(cache_path, "r", encoding="utf-8") as f:
+                                    data = json.load(f)
+                                for v in data.get("versions", []):
+                                    if v.get("id") == version_id:
+                                        url = v.get("url")
+                                        break
+                        except Exception:
+                            pass
+                            
+                    if url:
+                        os.makedirs(os.path.dirname(version_json_path), exist_ok=True)
+                        headers = {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        }
+                        r = requests.get(url, headers=headers, timeout=15)
+                        if r.status_code == 200 and len(r.content) > 0:
+                            # Verify it is valid JSON before writing
+                            json.loads(r.text)
+                            with open(version_json_path, "w", encoding="utf-8") as f:
+                                f.write(r.text)
+                            print(f"Manually downloaded valid version JSON to {version_json_path}")
+                except Exception as download_err:
+                    print(f"Manual version JSON download failed/skipped: {download_err}")
+                    # If we wrote a partial/corrupted file, remove it
+                    if os.path.exists(version_json_path):
+                        try:
+                            os.remove(version_json_path)
+                        except Exception:
+                            pass
+
             set_status(f"Starting installation of vanilla {version_id}...")
             minecraft_launcher_lib.install.install_minecraft_version(
                 version=version_id,
@@ -328,6 +409,26 @@ class MinecraftManager:
             set_status(f"Installation of {version_id} ({loader_type}) completed successfully!")
             return True, "Installation complete"
         except Exception as e:
+            # Clean up the JSON file if it exists and is invalid/0-byte to avoid getting stuck
+            if os.path.exists(version_json_path):
+                try:
+                    should_delete = False
+                    if os.path.getsize(version_json_path) == 0:
+                        should_delete = True
+                    else:
+                        import json
+                        with open(version_json_path, "r", encoding="utf-8") as f:
+                            json.load(f)
+                except Exception:
+                    should_delete = True
+                
+                if should_delete:
+                    try:
+                        os.remove(version_json_path)
+                        print(f"Cleaned up invalid version JSON after failed install: {version_json_path}")
+                    except Exception:
+                        pass
+            
             set_status(f"Error during installation: {e}")
             return False, str(e)
 
