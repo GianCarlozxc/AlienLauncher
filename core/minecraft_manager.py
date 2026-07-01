@@ -25,7 +25,34 @@ class MinecraftManager:
         self.launch_process = None
         self._online_versions_cache = None
 
+    def clean_corrupted_cache_files(self):
+        """Finds and deletes 0-byte jar, json, and asset files in the minecraft folder to prevent download skip bugs."""
+        mc_dir = self.config_manager.get_minecraft_folder()
+        if not os.path.exists(mc_dir):
+            return
+            
+        target_subdirs = ["libraries", "assets", "versions"]
+        for subdir in target_subdirs:
+            path = os.path.join(mc_dir, subdir)
+            if os.path.exists(path):
+                try:
+                    for root, dirs, files in os.walk(path):
+                        for f in files:
+                            # We target .jar, .json, and other metadata/library files
+                            # Check if the file is 0 bytes
+                            if f.endswith(('.jar', '.json', '.zip', '.class')):
+                                file_path = os.path.join(root, f)
+                                try:
+                                    if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
+                                        os.remove(file_path)
+                                        print(f"Removed 0-byte corrupted cache file: {file_path}")
+                                except Exception:
+                                    pass
+                except Exception as e:
+                    print(f"Error scanning corrupted cache files in {subdir}: {e}")
+
     def get_installed_versions(self):
+        self.clean_corrupted_cache_files()
         mc_dir = self.config_manager.get_minecraft_folder()
         if not os.path.exists(mc_dir):
             return []
@@ -343,6 +370,7 @@ class MinecraftManager:
 
     def install_version(self, version_id, progress_callback=None, status_callback=None):
         """Installs the selected version of Minecraft in a thread-safe way"""
+        self.clean_corrupted_cache_files()
         mc_dir = self.config_manager.get_minecraft_folder()
         loader_type = self.config_manager.get("loader_type", "Vanilla")
         
@@ -528,6 +556,7 @@ class MinecraftManager:
 
     def launch_minecraft(self, version_id, on_exit_callback=None):
         """Launches Minecraft under a new process"""
+        self.clean_corrupted_cache_files()
         mc_dir = self.config_manager.get_minecraft_folder()
         account_type = self.config_manager.get("account_type", "Offline")
         username = self.config_manager.get("username", "AlienPlayer")
