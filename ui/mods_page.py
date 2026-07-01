@@ -239,6 +239,19 @@ class ModsPage(ctk.CTkFrame):
         )
         btn_delete_selected.pack(side="right", padx=(10, 0))
 
+        self.btn_update_mods = ctk.CTkButton(
+            downloaded_header_frame,
+            text="🚀 Update Mods",
+            width=110,
+            height=24,
+            fg_color="#2ECC71",
+            hover_color="#27AE60",
+            text_color="#121212",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            command=self.trigger_one_click_updater
+        )
+        self.btn_update_mods.pack(side="right", padx=(10, 0))
+
         # Downloaded Mods Scrollable Frame
         self.downloaded_frame = ctk.CTkScrollableFrame(
             self, 
@@ -837,7 +850,8 @@ class ModsPage(ctk.CTkFrame):
                     "filename": result,
                     "title": mod_title,
                     "project_type": project_type,
-                    "icon_url": icon_url
+                    "icon_url": icon_url,
+                    "is_curseforge": is_curseforge
                 }
                 self.config_manager.set("installed_mods", installed_map)
                 
@@ -1091,4 +1105,60 @@ class ModsPage(ctk.CTkFrame):
         # Refresh lists
         self.refresh_installed_mods()
         self.start_search_thread(reset_offset=False)
+
+    def trigger_one_click_updater(self):
+        # Prevent double click/run
+        self.btn_update_mods.configure(state="disabled", text="Checking...")
+        
+        def run_update():
+            # Create progress dialog
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("One-Click Mod Updater")
+            dialog.geometry("400x180")
+            dialog.resizable(False, False)
+            dialog.transient(self)
+            dialog.grab_set()
+            
+            x = self.winfo_x() + (self.winfo_width() // 2) - 200
+            y = self.winfo_y() + (self.winfo_height() // 2) - 90
+            dialog.geometry(f"+{x}+{y}")
+            
+            lbl_title = ctk.CTkLabel(dialog, text="Updating Mods...", font=ctk.CTkFont(size=14, weight="bold"), text_color="#2ECC71")
+            lbl_title.pack(pady=(20, 10))
+            
+            progress_bar = ctk.CTkProgressBar(dialog, width=320, height=8, progress_color="#2ECC71")
+            progress_bar.set(0)
+            progress_bar.pack(pady=5)
+            
+            lbl_status = ctk.CTkLabel(dialog, text="Initializing...", font=ctk.CTkFont(size=11), text_color="#888888")
+            lbl_status.pack(pady=5)
+            
+            def progress_cb(current, total, msg):
+                pct = current / total if total > 0 else 0
+                self.run_in_gui(progress_bar.set, pct)
+                self.run_in_gui(lbl_status.configure, text=msg)
+                
+            success, updated, errors = self.mods_manager.update_all_installed_mods(progress_cb)
+            
+            def finish_gui():
+                dialog.destroy()
+                self.btn_update_mods.configure(state="normal", text="🚀 Update Mods")
+                self.refresh_installed_mods()
+                self.start_search_thread(reset_offset=False)
+                
+                # Show results summary
+                if updated:
+                    summary = "\n".join([f"• {title}: {old} -> {new}" for title, old, new in updated])
+                    messagebox.showinfo("Update Complete", f"Successfully updated {len(updated)} mods:\n\n{summary}")
+                else:
+                    clean_errors = [e for e in errors if e]
+                    if clean_errors:
+                        err_summary = "\n".join(clean_errors[:5])
+                        messagebox.showwarning("Update Finished", f"No updates were installed.\nErrors encountered:\n{err_summary}")
+                    else:
+                        messagebox.showinfo("Up to Date", "All mods are already up to date!")
+            
+            self.run_in_gui(finish_gui)
+
+        threading.Thread(target=run_update, daemon=True).start()
 

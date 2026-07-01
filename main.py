@@ -1,6 +1,8 @@
 import sys
 import os
 
+_instance_lock_socket = None
+
 # Disable SSL verification globally to prevent SSL: CERTIFICATE_VERIFY_FAILED errors
 # (common behind proxies, school networks, or environments with outdated certificates)
 try:
@@ -73,6 +75,25 @@ except Exception as e:
     print(f"Failed to apply scroll speed optimization patch: {e}")
 
 def main():
+    # Prevent multiple instances from running simultaneously
+    import socket
+    global _instance_lock_socket
+    try:
+        _instance_lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Bind to a localhost port specific to Alien Launcher
+        _instance_lock_socket.bind(('127.0.0.1', 58430))
+    except socket.error:
+        # Another instance is already running
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showwarning("Alien Launcher", "Alien Launcher is already running!")
+        except Exception:
+            pass
+        sys.exit(0)
+
     try:
         # Clean up any leftover .old executable from in-place updates
         try:
