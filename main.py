@@ -28,8 +28,9 @@ try:
         is_json_endpoint = url.endswith('.json') or 'api' in url or 'manifest' in url
         if is_json_endpoint and res.text:
             text_prefix = res.text.strip().lower()
-            if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or 'fortiguard' in text_prefix or 'blocked' in text_prefix:
-                raise Exception("Your network connection is blocked by a firewall, web filter, or captive portal (e.g., FortiGuard). Please disable your VPN/filter or check your internet usage policy.")
+            if text_prefix.startswith('<') or 'fortiguard' in text_prefix:
+                if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or text_prefix.startswith('<head') or 'fortiguard' in text_prefix:
+                    raise Exception("Your network connection is blocked by a firewall, web filter, or captive portal (e.g., FortiGuard). Please disable your VPN/filter or check your internet usage policy.")
                 
         return res
     requests.Session.request = patched_request
