@@ -205,12 +205,17 @@ class MinecraftManager:
         # Check standard environmental variable
         java_home = os.environ.get("JAVA_HOME")
         if java_home:
-            exe = os.path.join(java_home, "bin", "java.exe")
-            if os.path.exists(exe):
+            exe_w = os.path.join(java_home, "bin", "javaw.exe") if sys.platform == "win32" else os.path.join(java_home, "bin", "java")
+            exe = os.path.join(java_home, "bin", "java.exe") if sys.platform == "win32" else os.path.join(java_home, "bin", "java")
+            if sys.platform == "win32" and os.path.exists(exe_w):
+                java_paths.append(exe_w)
+            elif os.path.exists(exe):
                 java_paths.append(exe)
 
         # Check in PATH
-        path_java = shutil.which("java")
+        path_java = shutil.which("javaw") if sys.platform == "win32" else shutil.which("java")
+        if not path_java and sys.platform == "win32":
+            path_java = shutil.which("java")
         if path_java and path_java not in java_paths:
             java_paths.append(path_java)
 
@@ -221,12 +226,13 @@ class MinecraftManager:
             r"C:\Program Files (x86)\Java",
             r"C:\Program Files\Microsoft"
         ]
+        target_exe = "javaw.exe" if sys.platform == "win32" else "java"
         for s_dir in search_dirs:
             if os.path.exists(s_dir):
                 try:
                     for root, dirs, files in os.walk(s_dir):
-                        if "java.exe" in files:
-                            exe = os.path.join(root, "java.exe")
+                        if target_exe in files:
+                            exe = os.path.join(root, target_exe)
                             if exe not in java_paths:
                                 java_paths.append(exe)
                 except Exception as e:
@@ -593,9 +599,19 @@ class MinecraftManager:
             "gameDirectory": mc_dir
         }
 
-        # Set Custom Java Path if set
+        # Set Custom Java Path if set, otherwise try to find a javaw.exe fallback on Windows to prevent console window
         if java_path:
+            # If the user has a custom java.exe path, convert it to javaw.exe
+            if sys.platform == "win32" and java_path.lower().endswith("java.exe"):
+                java_path_w = java_path[:-8] + "javaw.exe"
+                if os.path.exists(java_path_w):
+                    java_path = java_path_w
             options["executablePath"] = java_path
+        elif sys.platform == "win32":
+            # Find a default javaw.exe to prevent the black console window
+            detected = self.detect_java_paths()
+            if detected:
+                options["executablePath"] = detected[0]
 
         # Authentication options
         client_id_val = ""
