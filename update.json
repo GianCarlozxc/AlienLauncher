@@ -1,5 +1,5 @@
 {
-    "version": "1.5.1",
-    "changelog": "update",
-    "download_url": "https://github.com/GianCarlozxc/AlienLauncher/releases/download/v1.5.1/Alien.Launcher.exe"
+    "version": "1.5.2",
+    "changelog": "fix: download_fabric_api fallback and error tolerance for other versions",
+    "download_url": "https://github.com/GianCarlozxc/AlienLauncher/releases/download/v1.5.2/Alien.Launcher.exe"
 }
