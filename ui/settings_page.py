@@ -711,14 +711,6 @@ class SettingsPage(ctk.CTkFrame):
         top_ctrl_frame = ctk.CTkFrame(self.screenshot_card, fg_color="transparent")
         top_ctrl_frame.grid(row=1, column=0, padx=15, pady=(0, 10), sticky="ew")
 
-        btn_open_folder = ctk.CTkButton(
-            top_ctrl_frame, text="Open Folder", width=120, height=28,
-            fg_color=SECONDARY_BUTTON, hover_color=SECONDARY_HOVER, text_color=TEXT_PRIMARY,
-            font=ctk.CTkFont(weight="bold"),
-            command=self.open_screenshots_folder
-        )
-        btn_open_folder.pack(side="left", padx=(0, 10))
-
         btn_refresh = ctk.CTkButton(
             top_ctrl_frame, text="Refresh Gallery", width=120, height=28,
             fg_color=ACCENT, hover_color=ACCENT_HOVER, text_color=ACCENT_TEXT,

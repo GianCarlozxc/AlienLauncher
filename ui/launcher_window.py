@@ -73,7 +73,13 @@ class LauncherWindow(ctk.CTk):
 
         # Window properties
         self.title("Alien Launcher")
-        self.geometry("1100x650")
+        width = 1100
+        height = 650
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
         self.resizable(False, False)
 
         # Set Window Icon
