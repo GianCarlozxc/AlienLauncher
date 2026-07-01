@@ -4,6 +4,8 @@ import uuid
 import shutil
 import subprocess
 import threading
+import hashlib
+import time
 import minecraft_launcher_lib
 import minecraft_launcher_lib.fabric
 import minecraft_launcher_lib.quilt
@@ -50,6 +52,226 @@ class MinecraftManager:
                                     pass
                 except Exception as e:
                     print(f"Error scanning corrupted cache files in {subdir}: {e}")
+
+    def download_file_with_retry(self, url, path, expected_sha1=None, max_retries=3, status_callback=None):
+        """Downloads a file with exponential backoff retry and SHA-1 verification, switching to mirror if blocked/failed."""
+        import requests
+        
+        # Function to compute sha1
+        def get_sha1(file_path):
+            h = hashlib.sha1()
+            try:
+                with open(file_path, 'rb') as f:
+                    for chunk in iter(lambda: f.read(65536), b''):
+                        h.update(chunk)
+                return h.hexdigest()
+            except Exception:
+                return None
+
+        # Check if the file is already valid
+        if os.path.exists(path) and os.path.getsize(path) > 0:
+            if not expected_sha1 or get_sha1(path) == expected_sha1:
+                return True
+
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        # Mirror mapping
+        def map_to_mirror(u):
+            new_u = u
+            is_package_json = ('piston-meta.mojang.com' in u or 'launchermeta.mojang.com' in u) and '/packages/' in u and u.endswith('.json')
+            if is_package_json:
+                version_id = u.split('/')[-1][:-5]
+                new_u = f"https://bmclapi2.bangbang93.com/version/{version_id}/json"
+            elif 'launchermeta.mojang.com' in u:
+                new_u = u.replace('launchermeta.mojang.com', 'bmclapi2.bangbang93.com')
+            elif 'launcher.mojang.com' in u:
+                new_u = u.replace('launcher.mojang.com', 'bmclapi2.bangbang93.com')
+            elif 'piston-meta.mojang.com' in u:
+                new_u = u.replace('piston-meta.mojang.com', 'bmclapi2.bangbang93.com')
+            elif 'piston-data.mojang.com' in u:
+                new_u = u.replace('piston-data.mojang.com', 'bmclapi2.bangbang93.com')
+            elif 'libraries.minecraft.net' in u:
+                new_u = u.replace('libraries.minecraft.net', 'bmclapi2.bangbang93.com/maven')
+            elif 'resources.download.minecraft.net' in u:
+                new_u = u.replace('resources.download.minecraft.net', 'bmclapi2.bangbang93.com/assets')
+            elif 'maven.fabricmc.net' in u:
+                new_u = u.replace('maven.fabricmc.net', 'bmclapi2.bangbang93.com/maven/fabricmc')
+            elif 'meta.fabricmc.net' in u:
+                new_u = u.replace('meta.fabricmc.net', 'bmclapi2.bangbang93.com/fabric-meta')
+            return new_u
+
+        urls_to_try = [url]
+        mirror = map_to_mirror(url)
+        if mirror != url:
+            urls_to_try.append(mirror)
+
+        for current_url in urls_to_try:
+            delay = 1.0
+            for attempt in range(max_retries):
+                try:
+                    if status_callback:
+                        status_callback(f"Downloading {os.path.basename(path)} (Attempt {attempt+1}/{max_retries})...")
+                    
+                    headers = {"User-Agent": "AlienLauncher/1.0"}
+                    res = requests.get(current_url, stream=True, headers=headers, timeout=15)
+                    
+                    # Verify it's not a block page
+                    content_type = res.headers.get('Content-Type', '').lower()
+                    if 'text/html' in content_type:
+                        if res.text and ('fortiguard' in res.text.lower() or 'blocked' in res.text.lower() or res.text.strip().lower().startswith(('<!doctype html', '<html'))):
+                            raise ValueError("Block page received instead of binary file")
+
+                    if res.status_code == 200:
+                        with open(path, 'wb') as f:
+                            for chunk in res.iter_content(chunk_size=8192):
+                                if chunk:
+                                    f.write(chunk)
+                        
+                        # Validate SHA-1
+                        if expected_sha1:
+                            actual_sha1 = get_sha1(path)
+                            if actual_sha1 != expected_sha1:
+                                raise ValueError(f"Checksum mismatch: expected {expected_sha1}, got {actual_sha1}")
+                                
+                        if status_callback:
+                            status_callback(f"Successfully downloaded {os.path.basename(path)}")
+                        return True
+                    else:
+                        raise ValueError(f"HTTP Status {res.status_code}")
+                except Exception as e:
+                    print(f"Failed download attempt {attempt+1} for {current_url}: {e}")
+                    if os.path.exists(path):
+                        try:
+                            os.remove(path)
+                        except Exception:
+                            pass
+                    if attempt < max_retries - 1:
+                        time.sleep(delay)
+                        delay *= 2.0
+                        
+        return False
+
+    def scan_and_repair_version(self, version_id, force_redownload=False, progress_callback=None, status_callback=None):
+        """Scans and repairs all library files, assets, native DLLs, client jars, and manifests for the selected version."""
+        mc_dir = self.config_manager.get_minecraft_folder()
+        
+        def set_status(text):
+            if status_callback:
+                status_callback(text)
+                
+        def set_progress(val, max_val):
+            if progress_callback:
+                progress_callback(val, max_val)
+
+        # 1. Clean corrupted cache files first
+        self.clean_corrupted_cache_files()
+
+        version_json_path = os.path.join(mc_dir, "versions", version_id, f"{version_id}.json")
+        version_jar_path = os.path.join(mc_dir, "versions", version_id, f"{version_id}.jar")
+
+        if force_redownload:
+            set_status("Force clearing version cache directory...")
+            try:
+                version_dir = os.path.dirname(version_json_path)
+                if os.path.exists(version_dir):
+                    shutil.rmtree(version_dir)
+            except Exception as e:
+                print(f"Error clearing version directory: {e}")
+
+        # Download version JSON
+        if not os.path.exists(version_json_path) or force_redownload:
+            url = None
+            self._online_versions_cache = self.get_online_version_list()
+            if self._online_versions_cache:
+                for v in self._online_versions_cache:
+                    if v.get("id") == version_id:
+                        url = v.get("url")
+                        break
+            if url:
+                success = self.download_file_with_retry(url, version_json_path, status_callback=set_status)
+                if not success:
+                    return False, "Failed to download version metadata JSON file."
+
+        # Validate version JSON existence
+        if not os.path.exists(version_json_path):
+            return False, f"Version JSON manifest for {version_id} does not exist on disk, and could not be downloaded from Mojang's manifest. Please verify the version name is correct and you have an active internet connection."
+
+        # Parse version JSON
+        try:
+            import json
+            with open(version_json_path, "r", encoding="utf-8") as f:
+                version_data = json.load(f)
+        except Exception as e:
+            if os.path.exists(version_json_path):
+                try:
+                    os.remove(version_json_path)
+                except Exception:
+                    pass
+            return False, f"Failed to parse version JSON: {e}"
+
+        # Get libraries and assets lists
+        libraries = version_data.get("libraries", [])
+        downloads = version_data.get("downloads", {})
+        
+        # Download client JAR
+        client_download = downloads.get("client", {})
+        client_url = client_download.get("url")
+        client_sha1 = client_download.get("sha1")
+        if client_url and (not os.path.exists(version_jar_path) or force_redownload):
+            success = self.download_file_with_retry(client_url, version_jar_path, client_sha1, status_callback=set_status)
+            if not success:
+                return False, "Failed to download Minecraft client JAR."
+
+        # Download libraries
+        total_libs = len(libraries)
+        for idx, lib in enumerate(libraries):
+            set_progress(idx, total_libs + 10) # 10 is padding for assets
+            lib_downloads = lib.get("downloads", {})
+            artifact = lib_downloads.get("artifact", {})
+            lib_url = artifact.get("url")
+            lib_sha1 = artifact.get("sha1")
+            lib_path = os.path.join(mc_dir, "libraries", artifact.get("path", ""))
+            
+            if lib_url:
+                if not os.path.exists(lib_path) or force_redownload or os.path.getsize(lib_path) == 0:
+                    set_status(f"Repairing library {idx+1}/{total_libs}: {os.path.basename(lib_path)}")
+                    self.download_file_with_retry(lib_url, lib_path, lib_sha1, status_callback=set_status)
+
+        # Download assets
+        asset_index = version_data.get("assetIndex", {})
+        asset_index_id = asset_index.get("id")
+        asset_index_url = asset_index.get("url")
+        asset_index_sha1 = asset_index.get("sha1")
+        
+        if asset_index_url and asset_index_id:
+            asset_index_path = os.path.join(mc_dir, "assets", "indexes", f"{asset_index_id}.json")
+            if not os.path.exists(asset_index_path) or force_redownload:
+                set_status(f"Downloading asset index: {asset_index_id}")
+                self.download_file_with_retry(asset_index_url, asset_index_path, asset_index_sha1, status_callback=set_status)
+            
+            # Read asset index and download asset files
+            try:
+                with open(asset_index_path, "r", encoding="utf-8") as f:
+                    index_data = json.load(f)
+                objects = index_data.get("objects", {})
+                total_objects = len(objects)
+                for obj_idx, (name, obj_info) in enumerate(objects.items()):
+                    if obj_idx % 50 == 0: # Update progress every 50 objects to keep UI fast
+                        set_progress(total_libs + int(10 * (obj_idx / total_objects)), total_libs + 10)
+                        set_status(f"Verifying assets ({obj_idx}/{total_objects})...")
+                    obj_hash = obj_info.get("hash")
+                    obj_path = os.path.join(mc_dir, "assets", "objects", obj_hash[:2], obj_hash)
+                    obj_url = f"https://resources.download.minecraft.net/{obj_hash[:2]}/{obj_hash}"
+                    
+                    if not os.path.exists(obj_path) or force_redownload or os.path.getsize(obj_path) == 0:
+                        self.download_file_with_retry(obj_url, obj_path, obj_hash, max_retries=2)
+            except Exception as e:
+                print(f"Error repairing assets: {e}")
+
+        # Ensure directory structures are clean
+        set_status("Verification and repair complete.")
+        set_progress(total_libs + 10, total_libs + 10)
+        return True, "Installation repaired successfully."
 
     def get_installed_versions(self):
         self.clean_corrupted_cache_files()
@@ -102,12 +324,53 @@ class MinecraftManager:
             print(f"Error reading installed versions: {e}")
             return []
 
+    def get_online_version_list(self):
+        """Robustly fetches the version list from Mojang or the mirror."""
+        if self._online_versions_cache:
+            return self._online_versions_cache
+            
+        url = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
+        import requests
+        
+        # Try map_to_mirror
+        def map_to_mirror(u):
+            if 'launchermeta.mojang.com' in u:
+                return u.replace('launchermeta.mojang.com', 'bmclapi2.bangbang93.com')
+            return u
+            
+        urls = [url, map_to_mirror(url)]
+        for current_url in urls:
+            try:
+                res = requests.get(current_url, timeout=10)
+                if res.status_code == 200:
+                    data = res.json()
+                    self._online_versions_cache = data.get("versions", [])
+                    return self._online_versions_cache
+            except Exception:
+                pass
+                
+        # If both fail, try local file manifest fallback
+        try:
+            import json
+            if getattr(sys, 'frozen', False):
+                base_path = sys._MEIPASS
+            else:
+                base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            cache_path = os.path.join(base_path, "assets", "version_manifest_v2.json")
+            if os.path.exists(cache_path):
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self._online_versions_cache = data.get("versions", [])
+                return self._online_versions_cache
+        except Exception:
+            pass
+            
+        return []
+
     def get_available_versions(self):
         try:
             loader_type = self.config_manager.get("loader_type", "Vanilla")
-            if not self._online_versions_cache:
-                self._online_versions_cache = minecraft_launcher_lib.utils.get_version_list()
-            versions = self._online_versions_cache
+            versions = self.get_online_version_list()
             installed = self.get_installed_versions()
             selected = self.config_manager.get("selected_version")
             
@@ -198,6 +461,36 @@ class MinecraftManager:
                 if r not in filtered:
                     filtered.append(r)
             return filtered
+
+    def get_java_major_version(self, java_exe):
+        """Runs java -version or reads version from path to determine its major version."""
+        if not os.path.exists(java_exe):
+            return None
+        try:
+            creationflags = 0
+            if sys.platform == "win32":
+                creationflags = 0x08000000 # CREATE_NO_WINDOW
+            res = subprocess.run(
+                [java_exe, "-version"],
+                capture_output=True,
+                text=True,
+                creationflags=creationflags,
+                timeout=5
+            )
+            # Java version output is on stderr
+            output = res.stderr or res.stdout
+            if output:
+                import re
+                # Matches "1.8.0_xxx" or "11.x.x" or "17.x.x" or "21.x.x"
+                match = re.search(r'version "(\d+)\.?(\d+)?', output)
+                if match:
+                    major = int(match.group(1))
+                    if major == 1: # 1.8 -> 8
+                        major = int(match.group(2))
+                    return major
+        except Exception as e:
+            print(f"Error checking Java version for {java_exe}: {e}")
+        return None
 
     def detect_java_paths(self):
         java_paths = []
@@ -374,152 +667,45 @@ class MinecraftManager:
             return self.find_loader_version_id(vanilla_version_id, "LiteLoader") != vanilla_version_id
         return True
 
-    def install_version(self, version_id, progress_callback=None, status_callback=None):
-        """Installs the selected version of Minecraft in a thread-safe way"""
-        self.clean_corrupted_cache_files()
+    def install_version(self, version_id, progress_callback=None, status_callback=None, force_redownload=False):
+        """Installs the selected version of Minecraft in a thread-safe way, with full integrity repair."""
         mc_dir = self.config_manager.get_minecraft_folder()
         loader_type = self.config_manager.get("loader_type", "Vanilla")
         
-        current_max = 100
+        # 1. Run the custom integrity scanner & repair first (which handles vanilla client, libraries, assets)
+        success, msg = self.scan_and_repair_version(
+            version_id, 
+            force_redownload=force_redownload, 
+            progress_callback=progress_callback, 
+            status_callback=status_callback
+        )
         
-        def set_status(text):
-            if status_callback:
-                status_callback(text)
-
-        def set_progress(val):
-            if progress_callback:
-                progress_callback(val, current_max)
-
-        def set_max(val):
-            nonlocal current_max
-            current_max = val
-
-        callback = {
-            "setStatus": set_status,
-            "setProgress": set_progress,
-            "setMax": set_max
-        }
-
-        # Paths for version json validation and cleanup
-        version_json_path = os.path.join(mc_dir, "versions", version_id, f"{version_id}.json")
-
-        try:
-            # 1. Clean up invalid/empty version json if it exists
-            if os.path.exists(version_json_path):
-                should_delete = False
-                if os.path.getsize(version_json_path) == 0:
-                    should_delete = True
-                else:
-                    try:
-                        import json
-                        with open(version_json_path, "r", encoding="utf-8") as f:
-                            json.load(f)
-                    except Exception:
-                        should_delete = True
-                if should_delete:
-                    try:
-                        os.remove(version_json_path)
-                        print(f"Removed invalid/empty json: {version_json_path}")
-                    except Exception as err:
-                        print(f"Failed to remove invalid json: {err}")
-
-            # 2. Try to pre-download version json using requests (more robust with customized User-Agent)
-            if not os.path.exists(version_json_path):
-                try:
-                    import requests
-                    import json
-                    set_status(f"Downloading version manifest for {version_id}...")
-                    url = None
-                    # Get the URL from online versions cache
-                    if not self._online_versions_cache:
-                        try:
-                            self._online_versions_cache = minecraft_launcher_lib.utils.get_version_list()
-                        except Exception:
-                            pass
-                    
-                    if self._online_versions_cache:
-                        for v in self._online_versions_cache:
-                            if v.get("id") == version_id:
-                                url = v.get("url")
-                                break
-                    
-                    # If not found in cache, search in local fallback manifest
-                    if not url:
-                        try:
-                            if getattr(sys, 'frozen', False):
-                                base_path = sys._MEIPASS
-                            else:
-                                base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                            cache_path = os.path.join(base_path, "assets", "version_manifest_v2.json")
-                            if os.path.exists(cache_path):
-                                with open(cache_path, "r", encoding="utf-8") as f:
-                                    data = json.load(f)
-                                for v in data.get("versions", []):
-                                    if v.get("id") == version_id:
-                                        url = v.get("url")
-                                        break
-                        except Exception:
-                            pass
-                            
-                    if url:
-                        os.makedirs(os.path.dirname(version_json_path), exist_ok=True)
-                        headers = {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                        }
-                        r = requests.get(url, headers=headers, timeout=15)
-                        if r.status_code == 200 and len(r.content) > 0:
-                            # Verify it is valid JSON before writing
-                            json.loads(r.text)
-                            with open(version_json_path, "w", encoding="utf-8") as f:
-                                f.write(r.text)
-                            print(f"Manually downloaded valid version JSON to {version_json_path}")
-                except Exception as download_err:
-                    print(f"Manual version JSON download failed/skipped: {download_err}")
-                    # If we wrote a partial/corrupted file, remove it
-                    if os.path.exists(version_json_path):
-                        try:
-                            os.remove(version_json_path)
-                        except Exception:
-                            pass
-
-            set_status(f"Starting installation of vanilla {version_id}...")
-            minecraft_launcher_lib.install.install_minecraft_version(
-                version=version_id,
-                minecraft_directory=mc_dir,
-                callback=callback
-            )
+        if not success:
+            return False, msg
             
+        # 2. Install loaders if requested
+        try:
             if loader_type == "Fabric":
-                set_status("Installing Fabric loader...")
+                if status_callback:
+                    status_callback("Installing Fabric loader...")
                 minecraft_launcher_lib.fabric.install_fabric(version_id, mc_dir)
             elif loader_type == "Quilt":
-                set_status("Installing Quilt loader...")
+                if status_callback:
+                    status_callback("Installing Quilt loader...")
                 minecraft_launcher_lib.quilt.install_quilt(version_id, mc_dir)
+            elif loader_type in ["Forge", "NeoForge"]:
+                if status_callback:
+                    status_callback(f"Checking if {loader_type} files exist...")
+                loader_id = self.find_loader_version_id(version_id, loader_type.lower())
+                if loader_id == version_id:
+                    return False, f"{loader_type} cannot be auto-downloaded. Please run the {loader_type} installer and point it to {mc_dir}."
                 
-            set_status(f"Installation of {version_id} ({loader_type}) completed successfully!")
+            if status_callback:
+                status_callback(f"Installation of {version_id} ({loader_type}) completed successfully!")
             return True, "Installation complete"
         except Exception as e:
-            # Clean up the JSON file if it exists and is invalid/0-byte to avoid getting stuck
-            if os.path.exists(version_json_path):
-                try:
-                    should_delete = False
-                    if os.path.getsize(version_json_path) == 0:
-                        should_delete = True
-                    else:
-                        import json
-                        with open(version_json_path, "r", encoding="utf-8") as f:
-                            json.load(f)
-                except Exception:
-                    should_delete = True
-                
-                if should_delete:
-                    try:
-                        os.remove(version_json_path)
-                        print(f"Cleaned up invalid version JSON after failed install: {version_json_path}")
-                    except Exception:
-                        pass
-            
-            set_status(f"Error during installation: {e}")
+            if status_callback:
+                status_callback(f"Error during loader installation: {e}")
             return False, str(e)
 
     def ensure_authlib_injector(self, injector_path):
@@ -599,7 +785,19 @@ class MinecraftManager:
             "gameDirectory": mc_dir
         }
 
-        # Set Custom Java Path if set, otherwise try to find a javaw.exe fallback on Windows to prevent console window
+        # Resolve required Java major version from JSON manifest
+        required_java_major = None
+        version_json_path = os.path.join(mc_dir, "versions", launch_version_id, f"{launch_version_id}.json")
+        if os.path.exists(version_json_path):
+            try:
+                import json
+                with open(version_json_path, "r", encoding="utf-8") as f:
+                    v_data = json.load(f)
+                required_java_major = v_data.get("javaVersion", {}).get("majorVersion")
+            except Exception:
+                pass
+
+        # Set Custom Java Path if set, otherwise try to find a matched javaw.exe
         if java_path:
             # If the user has a custom java.exe path, convert it to javaw.exe
             if sys.platform == "win32" and java_path.lower().endswith("java.exe"):
@@ -607,11 +805,27 @@ class MinecraftManager:
                 if os.path.exists(java_path_w):
                     java_path = java_path_w
             options["executablePath"] = java_path
-        elif sys.platform == "win32":
-            # Find a default javaw.exe to prevent the black console window
+        else:
             detected = self.detect_java_paths()
-            if detected:
+            matched_java = None
+            if required_java_major and detected:
+                for path in detected:
+                    # Resolve real path to java.exe if it is javaw.exe for version checking
+                    java_check_path = path
+                    if sys.platform == "win32" and path.lower().endswith("javaw.exe"):
+                        java_check_path = path[:-9] + "java.exe"
+                        if not os.path.exists(java_check_path):
+                            java_check_path = path
+                    major = self.get_java_major_version(java_check_path)
+                    if major == required_java_major:
+                        matched_java = path
+                        break
+            if matched_java:
+                options["executablePath"] = matched_java
+                print(f"Auto-matched Java {required_java_major}: {matched_java}")
+            elif detected:
                 options["executablePath"] = detected[0]
+                print(f"Using default detected Java: {detected[0]}")
 
         # Authentication options
         client_id_val = ""

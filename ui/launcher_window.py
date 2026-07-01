@@ -661,6 +661,8 @@ class LauncherWindow(ctk.CTk):
         )
         self.btn_play.pack(anchor="e")
 
+
+
         # Loading / Status Details inside Control Deck
         self.status_label = ctk.CTkLabel(
             control_deck, text="Ready to Launch",
@@ -745,8 +747,9 @@ class LauncherWindow(ctk.CTk):
         
         is_ver_installed = selected_ver in installed
         is_loader_installed = self.minecraft_manager.is_loader_installed(selected_ver, loader)
+        force_redownload = False
         
-        if not is_ver_installed or not is_loader_installed:
+        if force_redownload or not is_ver_installed or not is_loader_installed:
             # We need to download and install
             confirm = messagebox.askyesno(
                 "Installation Required",
@@ -755,12 +758,12 @@ class LauncherWindow(ctk.CTk):
             if not confirm:
                 return
             
-            self.start_installation(selected_ver)
+            self.start_installation(selected_ver, force_redownload)
         else:
             # Already installed, just launch
             self.launch_game(selected_ver)
 
-    def start_installation(self, version_id):
+    def start_installation(self, version_id, force_redownload=False, is_repair_only=False):
         self.downloading = True
         self.btn_play.configure(state="disabled", text="INSTALLING...")
         self.progress_bar.grid()
@@ -775,7 +778,12 @@ class LauncherWindow(ctk.CTk):
             self.run_in_gui_thread(self.status_label.configure, text=text)
 
         def install_thread():
-            success, err = self.minecraft_manager.install_version(version_id, progress_cb, status_cb)
+            success, err = self.minecraft_manager.install_version(
+                version_id, 
+                progress_cb, 
+                status_cb, 
+                force_redownload=force_redownload
+            )
             
             def _on_finish():
                 self.downloading = False
@@ -785,10 +793,14 @@ class LauncherWindow(ctk.CTk):
                 if success:
                     # Refresh available versions to make sure the newly installed one is detected
                     self.available_versions = self.minecraft_manager.get_available_versions()
-                    self.launch_game(version_id)
+                    if is_repair_only:
+                        messagebox.showinfo("Repair Success", f"Successfully repaired {version_id}!")
+                        self.status_label.configure(text="Ready to Launch")
+                    else:
+                        self.launch_game(version_id)
                 else:
-                    messagebox.showerror("Installation Error", f"Failed to install {version_id}:\n{err}")
-                    self.status_label.configure(text="Installation failed")
+                    messagebox.showerror("Installation/Repair Error", f"Action failed for {version_id}:\n{err}")
+                    self.status_label.configure(text="Action failed")
             
             self.run_in_gui_thread(_on_finish)
 

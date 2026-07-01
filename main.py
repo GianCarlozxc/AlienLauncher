@@ -16,7 +16,11 @@ try:
     
     def map_to_mirror(url):
         new_url = url
-        if 'launchermeta.mojang.com' in url:
+        is_package_json = ('piston-meta.mojang.com' in url or 'launchermeta.mojang.com' in url) and '/packages/' in url and url.endswith('.json')
+        if is_package_json:
+            version_id = url.split('/')[-1][:-5]
+            new_url = f"https://bmclapi2.bangbang93.com/version/{version_id}/json"
+        elif 'launchermeta.mojang.com' in url:
             new_url = url.replace('launchermeta.mojang.com', 'bmclapi2.bangbang93.com')
         elif 'launcher.mojang.com' in url:
             new_url = url.replace('launcher.mojang.com', 'bmclapi2.bangbang93.com')
@@ -28,6 +32,10 @@ try:
             new_url = url.replace('libraries.minecraft.net', 'bmclapi2.bangbang93.com/maven')
         elif 'resources.download.minecraft.net' in url:
             new_url = url.replace('resources.download.minecraft.net', 'bmclapi2.bangbang93.com/assets')
+        elif 'maven.fabricmc.net' in url:
+            new_url = url.replace('maven.fabricmc.net', 'bmclapi2.bangbang93.com/maven/fabricmc')
+        elif 'meta.fabricmc.net' in url:
+            new_url = url.replace('meta.fabricmc.net', 'bmclapi2.bangbang93.com/fabric-meta')
         return new_url
 
     original_request = requests.Session.request
@@ -42,11 +50,9 @@ try:
         try:
             res = original_request(self, method, url, **kwargs)
             
-            # Detect firewalls or network block pages (e.g. FortiGuard) returning HTML for JSON APIs
-            is_json_endpoint = url.endswith('.json') or 'api' in url or 'manifest' in url
-            if is_json_endpoint and res.text:
-                text_prefix = res.text.strip().lower()
-                if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or 'fortiguard' in text_prefix or 'blocked' in text_prefix:
+            if res.content:
+                prefix = res.content[:200].strip().lower()
+                if prefix.startswith(b'<!doctype html') or prefix.startswith(b'<html') or b'fortiguard' in prefix or b'blocked' in prefix:
                     raise Exception("Network block detected")
             return res
         except Exception as e:
@@ -55,10 +61,9 @@ try:
             if mirror_url != url:
                 try:
                     res = original_request(self, method, mirror_url, **kwargs)
-                    is_json_endpoint = mirror_url.endswith('.json') or 'api' in mirror_url or 'manifest' in mirror_url
-                    if is_json_endpoint and res.text:
-                        text_prefix = res.text.strip().lower()
-                        if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or 'fortiguard' in text_prefix or 'blocked' in text_prefix:
+                    if res.content:
+                        prefix = res.content[:200].strip().lower()
+                        if prefix.startswith(b'<!doctype html') or prefix.startswith(b'<html') or b'fortiguard' in prefix or b'blocked' in prefix:
                             raise Exception("Mirror network block detected")
                     return res
                 except Exception:
@@ -70,10 +75,125 @@ try:
 
     requests.Session.request = patched_request
     
+    import minecraft_launcher_lib.install
+    import hashlib
+    import time
+    import shutil
+
+    def patched_download_file(url, path, callback=None, sha1=None, lzma_compressed=False, session=None, minecraft_directory=None, overwrite=False):
+        """Robust download_file replacement that uses temp files, retries, and checksum verification."""
+        if callback is None:
+            callback = {}
+            
+        def get_sha1_hash(file_path):
+            h = hashlib.sha1()
+            try:
+                with open(file_path, 'rb') as f:
+                    for chunk in iter(lambda: f.read(65536), b''):
+                        h.update(chunk)
+                return h.hexdigest()
+            except Exception:
+                return None
+
+        if os.path.isfile(path) and not overwrite:
+            if sha1 is None:
+                if os.path.getsize(path) > 0:
+                    return False
+            elif get_sha1_hash(path) == sha1:
+                return False
+                
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        except Exception:
+            pass
+
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+        tmp_path = path + ".tmp"
+
+        urls_to_try = [url]
+        mirror = map_to_mirror(url)
+        if mirror != url:
+            urls_to_try.append(mirror)
+
+        for current_url in urls_to_try:
+            delay = 1.0
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    if os.path.exists(tmp_path):
+                        try:
+                            os.remove(tmp_path)
+                        except Exception:
+                            pass
+                    
+                    callback.get("setStatus", lambda x: None)(f"Downloading {os.path.basename(path)} (Attempt {attempt+1}/{max_retries})...")
+                    
+                    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+                    
+                    r = session.get(current_url, stream=True, headers=headers, timeout=15) if session else requests.get(current_url, stream=True, headers=headers, timeout=15)
+                    
+                    content_type = r.headers.get('Content-Type', '').lower()
+                    if 'text/html' in content_type:
+                        prefix = r.content[:200].strip().lower()
+                        if prefix.startswith(b'<!doctype html') or prefix.startswith(b'<html') or b'fortiguard' in prefix or b'blocked' in prefix:
+                            raise ValueError("Firewall network block detected")
+
+                    if r.status_code != 200:
+                        raise ValueError(f"HTTP Status Code {r.status_code}")
+
+                    content_length = r.headers.get('Content-Length')
+                    expected_size = int(content_length) if content_length else None
+
+                    with open(tmp_path, 'wb') as f:
+                        r.raw.decode_content = True
+                        if lzma_compressed:
+                            import lzma
+                            f.write(lzma.decompress(r.content))
+                        else:
+                            shutil.copyfileobj(r.raw, f)
+
+                    if os.path.getsize(tmp_path) == 0:
+                        raise ValueError("Downloaded file is 0 bytes")
+
+                    if expected_size and os.path.getsize(tmp_path) != expected_size:
+                        raise ValueError(f"Size mismatch: expected {expected_size}, got {os.path.getsize(tmp_path)}")
+
+                    if sha1 is not None:
+                        checksum = get_sha1_hash(tmp_path)
+                        if checksum != sha1:
+                            raise ValueError(f"Checksum mismatch: expected {sha1}, got {checksum}")
+
+                    if os.path.exists(path):
+                        try:
+                            os.remove(path)
+                        except Exception:
+                            pass
+                    os.rename(tmp_path, path)
+                    return True
+                except Exception as e:
+                    print(f"Error downloading {os.path.basename(path)} from {current_url}: {e}")
+                    if os.path.exists(tmp_path):
+                        try:
+                            os.remove(tmp_path)
+                        except Exception:
+                            pass
+                    if attempt < max_retries - 1:
+                        time.sleep(delay)
+                        delay *= 2.0
+
+        return False
+
+    minecraft_launcher_lib.install.download_file = patched_download_file
+    
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-except Exception:
-    pass
+except Exception as patch_e:
+    print(f"Failed to apply main.py monkeypatches: {patch_e}")
 
 # Optimize scroll speed globally for CustomTkinter scrollable frames
 try:
