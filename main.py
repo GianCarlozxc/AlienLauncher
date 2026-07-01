@@ -13,6 +13,21 @@ except Exception:
 
 try:
     import requests
+    
+    def map_to_mirror(url):
+        new_url = url
+        if 'launchermeta.mojang.com' in url:
+            new_url = url.replace('launchermeta.mojang.com', 'bmclapi2.bangbang93.com')
+        elif 'launcher.mojang.com' in url:
+            new_url = url.replace('launcher.mojang.com', 'bmclapi2.bangbang93.com')
+        elif 'piston-meta.mojang.com' in url:
+            new_url = url.replace('piston-meta.mojang.com', 'bmclapi2.bangbang93.com')
+        elif 'libraries.minecraft.net' in url:
+            new_url = url.replace('libraries.minecraft.net', 'bmclapi2.bangbang93.com/maven')
+        elif 'resources.download.minecraft.net' in url:
+            new_url = url.replace('resources.download.minecraft.net', 'bmclapi2.bangbang93.com/assets')
+        return new_url
+
     original_request = requests.Session.request
     def patched_request(self, method, url, **kwargs):
         kwargs.setdefault('verify', False)
@@ -22,17 +37,35 @@ try:
             headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             kwargs['headers'] = headers
             
-        res = original_request(self, method, url, **kwargs)
-        
-        # Detect firewalls or network block pages (e.g. FortiGuard) returning HTML for JSON APIs
-        is_json_endpoint = url.endswith('.json') or 'api' in url or 'manifest' in url
-        if is_json_endpoint and res.text:
-            text_prefix = res.text.strip().lower()
-            if text_prefix.startswith('<') or 'fortiguard' in text_prefix:
-                if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or text_prefix.startswith('<head') or 'fortiguard' in text_prefix:
-                    raise Exception("Your network connection is blocked by a firewall, web filter, or captive portal (e.g., FortiGuard). Please disable your VPN/filter or check your internet usage policy.")
-                
-        return res
+        try:
+            res = original_request(self, method, url, **kwargs)
+            
+            # Detect firewalls or network block pages (e.g. FortiGuard) returning HTML for JSON APIs
+            is_json_endpoint = url.endswith('.json') or 'api' in url or 'manifest' in url
+            if is_json_endpoint and res.text:
+                text_prefix = res.text.strip().lower()
+                if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or 'fortiguard' in text_prefix or 'blocked' in text_prefix:
+                    raise Exception("Network block detected")
+            return res
+        except Exception as e:
+            # Try fallback to mirror URL if it's a Mojang URL
+            mirror_url = map_to_mirror(url)
+            if mirror_url != url:
+                try:
+                    res = original_request(self, method, mirror_url, **kwargs)
+                    is_json_endpoint = mirror_url.endswith('.json') or 'api' in mirror_url or 'manifest' in mirror_url
+                    if is_json_endpoint and res.text:
+                        text_prefix = res.text.strip().lower()
+                        if text_prefix.startswith('<!doctype html') or text_prefix.startswith('<html') or 'fortiguard' in text_prefix or 'blocked' in text_prefix:
+                            raise Exception("Mirror network block detected")
+                    return res
+                except Exception:
+                    pass
+            
+            if str(e) == "Network block detected":
+                raise Exception("Your network connection is blocked by a firewall, web filter, or captive portal (e.g., FortiGuard). Please disable your VPN/filter or check your internet usage policy.")
+            raise e
+
     requests.Session.request = patched_request
     
     import urllib3
