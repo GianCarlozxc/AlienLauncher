@@ -5,7 +5,7 @@ import requests
 import json
 import time
 
-LAUNCHER_VERSION = "1.4.8"
+LAUNCHER_VERSION = "1.4.9"
 
 class UpdateManager:
     def __init__(self, config_manager):
