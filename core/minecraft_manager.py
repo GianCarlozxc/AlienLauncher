@@ -46,7 +46,21 @@ class MinecraftManager:
                         try:
                             if os.path.getsize(json_file) > 0:
                                 with open(json_file, "r", encoding="utf-8") as f:
-                                    json.load(f)
+                                    version_data = json.load(f)
+                                
+                                # Verify jar file existence
+                                inherits = version_data.get("inheritsFrom")
+                                if inherits:
+                                    # Loader version: check if inherited base jar exists
+                                    base_jar = os.path.join(versions_dir, inherits, f"{inherits}.jar")
+                                    if not os.path.exists(base_jar):
+                                        raise ValueError("Base jar file missing")
+                                else:
+                                    # Vanilla version: jar file must exist
+                                    jar_file = os.path.join(dir_path, f"{d}.jar")
+                                    if not os.path.exists(jar_file):
+                                        raise ValueError("Jar file missing")
+                                
                                 installed_dirs.append(d)
                             else:
                                 raise ValueError("Empty file")
@@ -274,7 +288,19 @@ class MinecraftManager:
                             try:
                                 if os.path.getsize(json_file) > 0:
                                     with open(json_file, "r", encoding="utf-8") as f:
-                                        json.load(f)
+                                        version_data = json.load(f)
+                                    
+                                    # Verify base jar exists
+                                    inherits = version_data.get("inheritsFrom")
+                                    if inherits:
+                                        base_jar = os.path.join(versions_dir, inherits, f"{inherits}.jar")
+                                        if not os.path.exists(base_jar):
+                                            raise ValueError("Base jar missing")
+                                    else:
+                                        jar_file = os.path.join(dir_path, f"{d}.jar")
+                                        if not os.path.exists(jar_file):
+                                            raise ValueError("Jar file missing")
+                                            
                                     matches.append(d)
                                 else:
                                     raise ValueError("Empty file")
