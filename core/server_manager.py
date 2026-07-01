@@ -289,39 +289,86 @@ class ServerManager:
 
         status_cb("Downloading Fabric API for Fabric server dependencies...")
         headers = {"User-Agent": "Alien-Launcher/1.0.0"}
-        params = {
-            "game_versions": f'["{minecraft_version}"]',
-            "loaders": '["fabric"]'
-        }
+        
+        # 1. Try exact game version
+        versions = []
+        try:
+            params = {
+                "game_versions": f'["{minecraft_version}"]',
+                "loaders": '["fabric"]'
+            }
+            res = requests.get(
+                "https://api.modrinth.com/v2/project/fabric-api/version",
+                params=params,
+                headers=headers,
+                timeout=15
+            )
+            if res.status_code == 200:
+                versions = res.json()
+        except Exception as e:
+            print(f"Error querying exact Fabric API version: {e}")
 
-        res = requests.get(
-            "https://api.modrinth.com/v2/project/fabric-api/version",
-            params=params,
-            headers=headers,
-            timeout=20
-        )
-        if res.status_code != 200:
-            return False, f"Could not fetch Fabric API versions: HTTP {res.status_code}"
+        # 2. Try major/minor version match (e.g. 1.20 instead of 1.20.1)
+        if not versions and "." in minecraft_version:
+            try:
+                major_version = ".".join(minecraft_version.split(".")[:2])
+                params = {
+                    "game_versions": f'["{major_version}"]',
+                    "loaders": '["fabric"]'
+                }
+                res = requests.get(
+                    "https://api.modrinth.com/v2/project/fabric-api/version",
+                    params=params,
+                    headers=headers,
+                    timeout=15
+                )
+                if res.status_code == 200:
+                    versions = res.json()
+            except Exception as e:
+                print(f"Error querying major Fabric API version: {e}")
 
-        versions = res.json()
+        # 3. Try fetching any available versions
         if not versions:
-            return False, f"No Fabric API version found for Minecraft {minecraft_version}."
+            try:
+                params = {
+                    "loaders": '["fabric"]'
+                }
+                res = requests.get(
+                    "https://api.modrinth.com/v2/project/fabric-api/version",
+                    params=params,
+                    headers=headers,
+                    timeout=15
+                )
+                if res.status_code == 200:
+                    versions = res.json()
+            except Exception as e:
+                print(f"Error querying any Fabric API versions: {e}")
+
+        if not versions:
+            status_cb("Warning: No Fabric API version found on Modrinth. Skipping auto-download.")
+            return True, "No Fabric API version found on Modrinth."
 
         files = versions[0].get("files", [])
         selected_file = next((f for f in files if f.get("primary")), files[0] if files else None)
         if not selected_file:
-            return False, "No downloadable Fabric API file found."
+            status_cb("Warning: No downloadable Fabric API file found. Skipping auto-download.")
+            return True, "No downloadable Fabric API file found."
 
-        os.makedirs(mods_dir, exist_ok=True)
-        dest_path = os.path.join(mods_dir, selected_file["filename"])
-        download = requests.get(selected_file["url"], headers=headers, timeout=60)
-        if download.status_code != 200:
-            return False, f"Could not download Fabric API: HTTP {download.status_code}"
+        try:
+            os.makedirs(mods_dir, exist_ok=True)
+            dest_path = os.path.join(mods_dir, selected_file["filename"])
+            download = requests.get(selected_file["url"], headers=headers, timeout=60)
+            if download.status_code != 200:
+                status_cb(f"Warning: Could not download Fabric API (HTTP {download.status_code}). Skipping auto-download.")
+                return True, f"Could not download Fabric API: HTTP {download.status_code}"
 
-        with open(dest_path, "wb") as f:
-            f.write(download.content)
+            with open(dest_path, "wb") as f:
+                f.write(download.content)
 
-        return True, selected_file["filename"]
+            return True, selected_file["filename"]
+        except Exception as e:
+            status_cb(f"Warning: Error downloading Fabric API ({e}). Skipping auto-download.")
+            return True, str(e)
 
     def create_server(self, server_type, version, target_dir, progress_cb, status_cb, gamemode="Survival", setup_bedrock=False):
         import requests
