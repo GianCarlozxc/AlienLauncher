@@ -22,6 +22,8 @@ try:
             new_url = url.replace('launcher.mojang.com', 'bmclapi2.bangbang93.com')
         elif 'piston-meta.mojang.com' in url:
             new_url = url.replace('piston-meta.mojang.com', 'bmclapi2.bangbang93.com')
+        elif 'piston-data.mojang.com' in url:
+            new_url = url.replace('piston-data.mojang.com', 'bmclapi2.bangbang93.com')
         elif 'libraries.minecraft.net' in url:
             new_url = url.replace('libraries.minecraft.net', 'bmclapi2.bangbang93.com/maven')
         elif 'resources.download.minecraft.net' in url:
