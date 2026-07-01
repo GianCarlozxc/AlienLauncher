@@ -35,31 +35,27 @@ class MinecraftManager:
             return []
             
         try:
+            import json
             installed_dirs = []
             for d in os.listdir(versions_dir):
                 dir_path = os.path.join(versions_dir, d)
-                json_path = os.path.join(dir_path, f"{d}.json")
-                if os.path.isdir(dir_path) and os.path.exists(json_path):
-                    # Check if the JSON file is valid and non-empty
-                    should_keep = False
-                    if os.path.getsize(json_path) > 0:
+                if os.path.isdir(dir_path):
+                    json_file = os.path.join(dir_path, f"{d}.json")
+                    if os.path.exists(json_file):
+                        # Verify the json is not empty and is valid JSON
                         try:
-                            import json
-                            with open(json_path, "r", encoding="utf-8") as f:
-                                json.load(f)
-                            should_keep = True
+                            if os.path.getsize(json_file) > 0:
+                                with open(json_file, "r", encoding="utf-8") as f:
+                                    json.load(f)
+                                installed_dirs.append(d)
+                            else:
+                                raise ValueError("Empty file")
                         except Exception:
-                            pass
-                    
-                    if should_keep:
-                        installed_dirs.append(d)
-                    else:
-                        # Clean up corrupt JSON to allow clean reinstall
-                        try:
-                            os.remove(json_path)
-                            print(f"Removed corrupt version JSON: {json_path}")
-                        except Exception:
-                            pass
+                            # If it is empty or invalid, try to remove it so that it can be clean-reinstalled
+                            try:
+                                os.remove(json_file)
+                            except Exception:
+                                pass
             return installed_dirs
         except Exception as e:
             print(f"Error reading installed versions: {e}")
@@ -267,12 +263,26 @@ class MinecraftManager:
         if not os.path.exists(versions_dir):
             return vanilla_version_id
         try:
+            import json
             matches = []
             for d in os.listdir(versions_dir):
                 if loader_prefix.lower() in d.lower() and vanilla_version_id in d:
                     dir_path = os.path.join(versions_dir, d)
-                    if os.path.isdir(dir_path) and os.path.exists(os.path.join(dir_path, f"{d}.json")):
-                        matches.append(d)
+                    if os.path.isdir(dir_path):
+                        json_file = os.path.join(dir_path, f"{d}.json")
+                        if os.path.exists(json_file):
+                            try:
+                                if os.path.getsize(json_file) > 0:
+                                    with open(json_file, "r", encoding="utf-8") as f:
+                                        json.load(f)
+                                    matches.append(d)
+                                else:
+                                    raise ValueError("Empty file")
+                            except Exception:
+                                try:
+                                    os.remove(json_file)
+                                except Exception:
+                                    pass
             if matches:
                 # Sort matching versions numerically so that the newest version is returned
                 import re
