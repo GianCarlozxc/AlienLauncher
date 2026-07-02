@@ -80,40 +80,35 @@ class TailscalePage(ctk.CTkFrame):
         actions_title = ctk.CTkLabel(actions_frame, text="Quick Actions", font=ctk.CTkFont(weight="bold", size=14))
         actions_title.pack(padx=15, pady=(10, 5), anchor="w")
 
-        buttons_container = ctk.CTkFrame(actions_frame, fg_color="transparent")
-        buttons_container.pack(padx=15, pady=(0, 10), fill="x")
+        self.buttons_container = ctk.CTkFrame(actions_frame, fg_color="transparent")
+        self.buttons_container.pack(padx=15, pady=(0, 10), fill="x")
 
         self.btn_up = ctk.CTkButton(
-            buttons_container, text="Tailscale Up", 
+            self.buttons_container, text="Tailscale Up", 
             fg_color=ui.theme.ACCENT_COLOR, hover_color=ui.theme.ACCENT_HOVER_COLOR, text_color=ui.theme.ACCENT_TEXT_COLOR,
             font=ctk.CTkFont(weight="bold"), command=self.action_up
         )
-        self.btn_up.pack(side="left", padx=(0, 10), pady=5)
 
         self.btn_down = ctk.CTkButton(
-            buttons_container, text="Tailscale Down", 
+            self.buttons_container, text="Tailscale Down", 
             fg_color="#C0392B", hover_color="#962D22", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"), command=self.action_down
         )
-        self.btn_down.pack(side="left", padx=10, pady=5)
 
         self.btn_login_logout = ctk.CTkButton(
-            buttons_container, text="Log in", 
+            self.buttons_container, text="Log in", 
             fg_color="#2980B9", hover_color="#1F618D", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"), command=self.action_login_logout
         )
-        self.btn_login_logout.pack(side="left", padx=10, pady=5)
 
         self.btn_status = ctk.CTkButton(
-            buttons_container, text="Check Status", 
+            self.buttons_container, text="Check Status", 
             fg_color="#2C2C2C", hover_color="#3A3A3A", text_color="#FFFFFF",
             command=self.action_status
         )
-        self.btn_status.pack(side="left", padx=10, pady=5)
-
 
         self.btn_download = ctk.CTkButton(
-            buttons_container, text="Download TS", 
+            self.buttons_container, text="Download TS", 
             fg_color="#3498DB", hover_color="#2980B9", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"),
             command=self.action_download_tailscale
@@ -151,6 +146,13 @@ class TailscalePage(ctk.CTkFrame):
         threading.Thread(target=_refresh, daemon=True).start()
 
     def _update_ui_values(self, is_installed, ip, status_output):
+        # Unpack all buttons first to recalculate visible buttons
+        self.btn_up.pack_forget()
+        self.btn_down.pack_forget()
+        self.btn_login_logout.pack_forget()
+        self.btn_status.pack_forget()
+        self.btn_download.pack_forget()
+
         # Install status update
         if is_installed:
             self.install_status_label.configure(text="Installed", text_color=ui.theme.SUCCESS_COLOR)
@@ -162,15 +164,11 @@ class TailscalePage(ctk.CTkFrame):
         # IP Status update
         self.ip_status_label.configure(text=ip)
         
-        # Enable/Disable status for up and down buttons
+        # Configure and pack buttons dynamically
         if is_installed:
-            self.btn_up.configure(state="normal")
-            self.btn_down.configure(state="normal")
-            
             if ip != "Not Connected / Unknown" and "logged out" not in status_output.lower():
                 self.conn_status_label.configure(text="Connected", text_color=ui.theme.SUCCESS_COLOR)
                 self.conn_card.configure(border_color=ui.theme.SUCCESS_COLOR)
-                # Save IP in configuration for reference
                 self.config_manager.set("tailscale_ip", ip)
                 
                 # Update login/logout button to Logout state (red)
@@ -182,6 +180,14 @@ class TailscalePage(ctk.CTkFrame):
                     state="normal"
                 )
                 self.is_logged_in = True
+                
+                # If connected, show control buttons: Up, Down, Logout, Status
+                self.btn_up.configure(state="normal")
+                self.btn_down.configure(state="normal")
+                self.btn_up.pack(side="left", padx=(0, 10), pady=5)
+                self.btn_down.pack(side="left", padx=10, pady=5)
+                self.btn_login_logout.pack(side="left", padx=10, pady=5)
+                self.btn_status.pack(side="left", padx=10, pady=5)
             else:
                 self.conn_status_label.configure(text="Disconnected", text_color="#F39C12")
                 self.conn_card.configure(border_color="#F39C12")
@@ -195,9 +201,10 @@ class TailscalePage(ctk.CTkFrame):
                     state="normal"
                 )
                 self.is_logged_in = False
+                
+                # If disconnected, show ONLY Log in button
+                self.btn_login_logout.pack(side="left", padx=(0, 10), pady=5)
         else:
-            self.btn_up.configure(state="disabled")
-            self.btn_down.configure(state="disabled")
             self.conn_status_label.configure(text="Inactive", text_color="#7F8C8D")
             self.conn_card.configure(border_color="#7F8C8D")
             
@@ -210,14 +217,13 @@ class TailscalePage(ctk.CTkFrame):
                 state="disabled"
             )
             self.is_logged_in = False
+            
+            # If not installed, show Download TS and disabled Log in button
+            self.btn_download.pack(side="left", padx=(0, 10), pady=5)
+            self.btn_login_logout.pack(side="left", padx=10, pady=5)
 
         # Update log/devices panel
         self._update_log(status_output, clear=True)
-
-        if not is_installed:
-            self.btn_download.pack(side="left", padx=10, pady=5)
-        else:
-            self.btn_download.pack_forget()
 
     def action_up(self):
         self._update_log("Executing 'tailscale up'...\n", clear=True)
@@ -257,7 +263,6 @@ class TailscalePage(ctk.CTkFrame):
 
     def action_status(self):
         self.refresh_status()
-
 
     def _copy_to_clipboard(self, text):
         self.clipboard_clear()
