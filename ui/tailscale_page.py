@@ -427,7 +427,27 @@ class TailscalePage(ctk.CTkFrame):
                 self.run_in_gui(self._update_log, "Downloading installer from official servers...\n")
                 urllib.request.urlretrieve(url, installer_path)
                 self.run_in_gui(self._update_log, "Download complete! Launching installer...\n(Please accept the Windows UAC permission prompt to install)\n")
-                os.startfile(installer_path, "runas", "/quiet /norestart")
+                
+                # Run elevated and wait for completion using PowerShell
+                cmd = [
+                    "powershell",
+                    "-Command",
+                    f"Start-Process -FilePath '{installer_path}' -ArgumentList '/quiet /norestart' -Verb RunAs -Wait"
+                ]
+                
+                # Hide CMD popup on Windows
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = 0 # SW_HIDE
+                
+                subprocess.run(cmd, startupinfo=startupinfo, check=True)
+                
+                # Check if installation was successful
+                if self.tailscale_manager.is_installed():
+                    self.run_in_gui(self._update_log, "\n[System] Tailscale has been successfully installed!\n")
+                else:
+                    self.run_in_gui(self._update_log, "\n[System] Tailscale installation was cancelled or failed.\n")
+                    
             except Exception as e:
                 self.run_in_gui(self._update_log, f"Failed to download or run installer: {str(e)}\n")
             finally:
