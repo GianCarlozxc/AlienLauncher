@@ -427,7 +427,7 @@ class TailscalePage(ctk.CTkFrame):
                 self.run_in_gui(self._update_log, "Downloading installer from official servers...\n")
                 urllib.request.urlretrieve(url, installer_path)
                 self.run_in_gui(self._update_log, "Download complete! Launching installer...\n(Please accept the Windows UAC permission prompt to install)\n")
-                os.startfile(installer_path)
+                os.startfile(installer_path, "runas", "/quiet /norestart")
             except Exception as e:
                 self.run_in_gui(self._update_log, f"Failed to download or run installer: {str(e)}\n")
             finally:
