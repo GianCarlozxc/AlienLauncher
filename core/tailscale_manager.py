@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import re
 
 class TailscaleManager:
     def __init__(self):
@@ -84,15 +85,69 @@ class TailscaleManager:
         return output or "Tailscale status unavailable."
 
     def up(self):
-        # Runs 'tailscale up' (non-blocking or run async, but we can do a standard run)
-        # Note: on Windows, 'tailscale up' might require admin if running for the first time,
-        # but if it's already set up, it will connect.
-        # We can run it in the background or with a timeout.
+        # Runs 'tailscale up' (plain connect)
         success, output = self.run_command(["up"])
+        return success, output
+
+    def login(self, auth_key):
+        # Runs 'tailscale up' with the provided authkey to log in
+        success, output = self.run_command(["up", f"--authkey={auth_key}"])
         return success, output
 
     def down(self):
         # Runs 'tailscale down'
         success, output = self.run_command(["down"])
         return success, output
+
+    def logout(self):
+        # Runs 'tailscale logout'
+        success, output = self.run_command(["logout"])
+        return success, output
+
+    def start_login_flow(self, url_callback, status_callback):
+        if not self.is_installed():
+            status_callback("Tailscale is not installed.")
+            return
+            
+        cmd = [self.get_executable(), "up"]
+        
+        try:
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0
+            
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                startupinfo=startupinfo
+            )
+            
+            url_found = False
+            # Read stderr first since Tailscale writes interactive prompt there
+            for line in process.stderr:
+                match = re.search(r"https://login\.tailscale\.com/a/\S+", line)
+                if match:
+                    url = match.group(0)
+                    url_callback(url)
+                    url_found = True
+                    break
+                    
+            if not url_found:
+                for line in process.stdout:
+                    match = re.search(r"https://login\.tailscale\.com/a/\S+", line)
+                    if match:
+                        url = match.group(0)
+                        url_callback(url)
+                        url_found = True
+                        break
+                        
+            process.wait()
+            if process.returncode == 0:
+                status_callback("Login successful!")
+            else:
+                status_callback(f"Login process exited with code {process.returncode}")
+        except Exception as e:
+            status_callback(f"Error during login flow: {e}")
 
