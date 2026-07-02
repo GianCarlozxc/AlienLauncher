@@ -685,20 +685,37 @@ class MinecraftManager:
             
         # 2. Install loaders if requested
         try:
+            from core import loader_installer
+            java_path = self.config_manager.get("java_path") or "java"
+            if not java_path:
+                java_path = "java"
+                
             if loader_type == "Fabric":
                 if status_callback:
                     status_callback("Installing Fabric loader...")
-                minecraft_launcher_lib.fabric.install_fabric(version_id, mc_dir)
+                loader_installer.install_fabric_or_quilt(version_id, mc_dir, is_quilt=False, status_callback=status_callback)
             elif loader_type == "Quilt":
                 if status_callback:
                     status_callback("Installing Quilt loader...")
-                minecraft_launcher_lib.quilt.install_quilt(version_id, mc_dir)
-            elif loader_type in ["Forge", "NeoForge"]:
+                loader_installer.install_fabric_or_quilt(version_id, mc_dir, is_quilt=True, status_callback=status_callback)
+            elif loader_type == "Forge":
                 if status_callback:
-                    status_callback(f"Checking if {loader_type} files exist...")
-                loader_id = self.find_loader_version_id(version_id, loader_type.lower())
-                if loader_id == version_id:
-                    return False, f"{loader_type} cannot be auto-downloaded. Please run the {loader_type} installer and point it to {mc_dir}."
+                    status_callback("Resolving Forge version...")
+                forge_ver = loader_installer.resolve_forge_version(version_id)
+                if not forge_ver:
+                    return False, f"Could not find a compatible Forge version for {version_id}."
+                if status_callback:
+                    status_callback(f"Installing Forge loader version {forge_ver}...")
+                loader_installer.install_forge(version_id, forge_ver, mc_dir, java_path=java_path, status_callback=status_callback)
+            elif loader_type == "NeoForge":
+                if status_callback:
+                    status_callback("Resolving NeoForge version...")
+                neoforge_ver = loader_installer.resolve_neoforge_version(version_id)
+                if not neoforge_ver:
+                    return False, f"Could not find a compatible NeoForge version for {version_id}."
+                if status_callback:
+                    status_callback(f"Installing NeoForge loader version {neoforge_ver}...")
+                loader_installer.install_neoforge(neoforge_ver, mc_dir, java_path=java_path, status_callback=status_callback)
                 
             if status_callback:
                 status_callback(f"Installation of {version_id} ({loader_type}) completed successfully!")

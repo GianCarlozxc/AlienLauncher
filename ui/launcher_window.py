@@ -630,9 +630,9 @@ class LauncherWindow(ctk.CTk):
         l_sub_frame = ctk.CTkFrame(v_select_frame, fg_color="transparent")
         l_sub_frame.grid(row=0, column=1, sticky="w")
         
-        ctk.CTkLabel(l_sub_frame, text="Select Loader / Type", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_MUTED).pack(anchor="w")
+        ctk.CTkLabel(l_sub_frame, text="Select Loader", font=ctk.CTkFont(size=11, weight="bold"), text_color=TEXT_MUTED).pack(anchor="w")
         
-        self.loader_var = ctk.StringVar(value=self.config_manager.get("loader_type", "Vanilla"))
+        self.loader_var = ctk.StringVar(value=self.config_manager.get("loader_type", "Fabric"))
         self.btn_select_loader = ctk.CTkButton(
             l_sub_frame, 
             textvariable=self.loader_var,
@@ -983,7 +983,7 @@ class LauncherWindow(ctk.CTk):
             return
 
         self.loader_dialog = ctk.CTkToplevel(self)
-        self.loader_dialog.title("Select Loader / Type")
+        self.loader_dialog.title("Select Loader")
         self.loader_dialog.geometry("300x450")
         self.loader_dialog.resizable(False, False)
         self.loader_dialog.overrideredirect(True) # Make borderless/non-movable
@@ -1028,7 +1028,7 @@ class LauncherWindow(ctk.CTk):
         # Header Title Label
         header_lbl = ctk.CTkLabel(
             main_frame,
-            text="SELECT LOADER / TYPE",
+            text="SELECT LOADER",
             font=ctk.CTkFont(family="Orbitron", size=12, weight="bold"),
             text_color=SUCCESS_COLOR
         )
@@ -1068,9 +1068,10 @@ class LauncherWindow(ctk.CTk):
         btn_cancel.pack(fill="x", padx=15, pady=(0, 15))
 
         loaders = [
-            "Vanilla", "Fabric", "NeoForge", "Forge", "Quilt", 
-            "OptiFine", "LiteLoader", "Snapshot", "Release", "Old Beta/Alpha"
+            "Fabric", "NeoForge", "Forge", "Quilt", 
+            "OptiFine", "LiteLoader"
         ]
+
 
         buttons = []
 
@@ -1086,6 +1087,7 @@ class LauncherWindow(ctk.CTk):
             
             for l in loaders:
                 if not filter_text or filter_text.lower() in l.lower():
+                    is_disabled = l in ["OptiFine", "LiteLoader"]
                     btn = ctk.CTkButton(
                         scroll_frame,
                         text=l,
@@ -1093,8 +1095,9 @@ class LauncherWindow(ctk.CTk):
                         anchor="w",
                         fg_color="transparent",
                         hover_color=SURFACE_HOVER,
-                        text_color=TEXT_SECONDARY,
+                        text_color=TEXT_MUTED if is_disabled else TEXT_SECONDARY,
                         font=ctk.CTkFont(size=12, weight="bold"),
+                        state="disabled" if is_disabled else "normal",
                         command=lambda loader=l: select_and_close(loader)
                     )
                     btn.pack(fill="x", pady=1)
