@@ -10,7 +10,7 @@
     "tailscale_ip": "100.127.109.98",
     "local_server_path": "C:\\Users\\Administrator\\AppData\\Roaming\\.giancraft\\servers\\fabric_26_1_2",
     "microsoft_data": {},
-    "curseforge_api_key": "$2a$10$.iQoyiZ3z5cRwKMtIVm39O.zEsmrBO0JDVentIncpttrd5MKz0XZy",
+    "curseforge_api_key": "$2a$10$gurq5K3V8ufte1zIG3e22OoCcTyPxf9H2b5skVxVaJEi1LUTFBAe6",
     "installed_mods": {},
     "loader_type": "Fabric",
     "friends": [],
@@ -25,6 +25,21 @@
         "skin_url": "https://ely.by/storage/skins/1c4d485bd73be3b13c8b36cf05206cde.png",
         "is_slim": false
     },
-    "launcher_style": "unicorn",
-    "enable_update_check": false
+    "launcher_style": "kitty",
+    "enable_update_check": false,
+    "saved_skins": {
+        "GianCarlo123": [
+            {
+                "id": 2049021,
+                "tags": [
+                    "Current Skin"
+                ],
+                "skin_url": "https://ely.by/storage/skins/1c4d485bd73be3b13c8b36cf05206cde.png",
+                "is_slim": false,
+                "count_views_total": 0,
+                "count_wearers": 0
+            }
+        ]
+    },
+    "tailscale_auth_key": "tskey-auth-kGyAjgVv4M11CNTRL-GtZho76WNrd6JvRRhzFnrdaG73uCrY3Yb"
 }

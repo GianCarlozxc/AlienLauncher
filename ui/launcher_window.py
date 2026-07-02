@@ -1,6 +1,7 @@
 import os
 import threading
 import queue
+import tkinter as tk
 import customtkinter as ctk
 from PIL import Image, ImageTk, ImageDraw
 import ui.custom_dialog as messagebox
@@ -43,9 +44,14 @@ class LauncherWindow(ctk.CTk):
         # Load configurations
         self.config_manager = ConfigManager()
         
-        # Setup Fonts (Orbitron and Chewy)
+        # Setup Fonts (Orbitron, Chewy, Space Grotesk, Fredoka, Oxanium, Exo 2, and Cinzel)
         self.setup_alien_font()
         self.setup_chewy_font()
+        self.setup_space_grotesk_font()
+        self.setup_fredoka_font()
+        self.setup_oxanium_font()
+        self.setup_exo2_font()
+        self.setup_cinzel_font()
         
         # Apply theme settings immediately
         saved_style = self.config_manager.get("launcher_style", "alien").lower()
@@ -184,6 +190,26 @@ class LauncherWindow(ctk.CTk):
             ico_path = get_asset_path("assets/Unicornlogo.ico")
             logo_path = get_asset_path("assets/Unicornlogo.png")
             logo_light_path = get_asset_path("assets/Unicornlogo-light.png")
+        elif saved_style == "onyx":
+            ico_path = get_asset_path("assets/Onyxlogo.ico")
+            logo_path = get_asset_path("assets/Onyxlogo.png")
+            logo_light_path = get_asset_path("assets/Onyxlogo.png")
+        elif saved_style == "kitty":
+            ico_path = get_asset_path("assets/Kittylogo.ico")
+            logo_path = get_asset_path("assets/Kittylogo.png")
+            logo_light_path = get_asset_path("assets/Kittylogo.png")
+        elif saved_style == "eclipsex":
+            ico_path = get_asset_path("assets/eclipseX.ico")
+            logo_path = get_asset_path("assets/eclipseX.png")
+            logo_light_path = get_asset_path("assets/eclipseX.png")
+        elif saved_style == "matrix":
+            ico_path = get_asset_path("assets/MatrixLogo.ico")
+            logo_path = get_asset_path("assets/MatrixLogo.png")
+            logo_light_path = get_asset_path("assets/MatrixLogo.png")
+        elif saved_style == "shougun":
+            ico_path = get_asset_path("assets/ShougunLogo.ico")
+            logo_path = get_asset_path("assets/ShougunLogo.png")
+            logo_light_path = get_asset_path("assets/ShougunLogo.png")
         else:
             ico_path = get_asset_path("assets/taskbarlogo.ico")
             logo_path = get_asset_path("assets/newlogo.png")
@@ -216,19 +242,93 @@ class LauncherWindow(ctk.CTk):
             except Exception as e:
                 print(f"Error updating sidebar logo: {e}")
 
-        # 3. Update Titles & Text
+        # 3. Update Titles & Text & Colors
+        is_light = self.config_manager.get("theme", "dark").lower() == "light"
+        
+        # Default/Alien text colors
+        title_color = "#FFFFFF"
+        subtitle_color = "#A5D6A7"
+        
         if saved_style == "unicorn":
             self.title("Unicorn Launcher")
             if hasattr(self, "banner_title_label"):
                 self.banner_title_label.configure(text="Unicorn Launcher")
             if hasattr(self, "credit_label"):
                 self.credit_label.configure(text=f"Unicorn Launcher v{LAUNCHER_VERSION}")
+            title_color = "#FF66CC"
+            subtitle_color = "#FFA6D5"
+        elif saved_style == "onyx":
+            self.title("Onyx Launcher")
+            if hasattr(self, "banner_title_label"):
+                self.banner_title_label.configure(text="Onyx Launcher")
+            if hasattr(self, "credit_label"):
+                self.credit_label.configure(text=f"Onyx Launcher v{LAUNCHER_VERSION}")
+            title_color = "#F5F5F5"
+            subtitle_color = "#9CA3AF"
+        elif saved_style == "kitty":
+            self.title("Kitty Launcher")
+            if hasattr(self, "banner_title_label"):
+                self.banner_title_label.configure(text="Kitty Launcher")
+            if hasattr(self, "credit_label"):
+                self.credit_label.configure(text=f"Kitty Launcher v{LAUNCHER_VERSION}")
+            title_color = "#000000" if is_light else "#FF4F9F"
+            subtitle_color = "#FF4F9F" if is_light else "#D1D5DB"
+        elif saved_style == "eclipsex":
+            self.title("EclipseX Launcher")
+            if hasattr(self, "banner_title_label"):
+                self.banner_title_label.configure(text="EclipseX Launcher")
+            if hasattr(self, "credit_label"):
+                self.credit_label.configure(text=f"EclipseX Launcher v{LAUNCHER_VERSION}")
+            title_color = "#111827" if is_light else "#E5E7EB"
+            subtitle_color = "#6B7280" if is_light else "#A1A1AA"
+        elif saved_style == "matrix":
+            self.title("Matrix Launcher")
+            if hasattr(self, "banner_title_label"):
+                self.banner_title_label.configure(text="Matrix Launcher")
+            if hasattr(self, "credit_label"):
+                self.credit_label.configure(text=f"Matrix Launcher v{LAUNCHER_VERSION}")
+            title_color = "#7CFF00"
+            subtitle_color = "#39FF14"
+        elif saved_style == "shougun":
+            self.title("Shougun Launcher")
+            if hasattr(self, "banner_title_label"):
+                self.banner_title_label.configure(text="Shougun Launcher")
+            if hasattr(self, "credit_label"):
+                self.credit_label.configure(text=f"Shougun Launcher v{LAUNCHER_VERSION}")
+            title_color = "#C1121F"
+            subtitle_color = "#B8BCC5"
         else:
             self.title("Alien Launcher")
             if hasattr(self, "banner_title_label"):
                 self.banner_title_label.configure(text="Alien Launcher")
             if hasattr(self, "credit_label"):
                 self.credit_label.configure(text=f"Alien Launcher v{LAUNCHER_VERSION}")
+
+        if hasattr(self, "banner_title_label"):
+            self.banner_title_label.configure(text_color=title_color)
+        if hasattr(self, "banner_subtitle"):
+            self.banner_subtitle.configure(text_color=subtitle_color)
+
+        if hasattr(self, "matrix_canvas") and self.matrix_canvas.winfo_exists():
+            if saved_style == "matrix":
+                canvas_bg = "#050505"
+            elif saved_style == "onyx":
+                canvas_bg = "#0B0B0D"
+            elif saved_style == "kitty":
+                canvas_bg = "#FFF5F8" if is_light else "#1E1218"
+            elif saved_style == "eclipsex":
+                canvas_bg = "#F8FAFC" if is_light else "#050506"
+            elif saved_style == "shougun":
+                canvas_bg = "#090909"
+            else:
+                canvas_bg = "transparent"
+                
+            self.matrix_canvas.configure(bg=canvas_bg)
+            
+            if hasattr(self, "banner_frame") and self.banner_frame.winfo_exists():
+                self.banner_frame.configure(fg_color=canvas_bg)
+            if hasattr(self, "cards_row") and self.cards_row.winfo_exists():
+                self.cards_row.configure(fg_color=canvas_bg)
 
         # 4. Load & Update Navigation Icons
         self.load_nav_icons()
@@ -500,6 +600,104 @@ class LauncherWindow(ctk.CTk):
             except Exception as e:
                 print(f"Failed to load Chewy font: {e}")
 
+    def setup_space_grotesk_font(self):
+        from ui.theme import get_asset_path
+        font_path = get_asset_path("assets/SpaceGrotesk.ttf")
+        if not os.path.exists(font_path):
+            try:
+                import urllib.request
+                url = "https://github.com/google/fonts/raw/main/ofl/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf"
+                urllib.request.urlretrieve(url, font_path)
+            except Exception as e:
+                print(f"Failed to download Space Grotesk font: {e}")
+                
+        if os.path.exists(font_path):
+            try:
+                import ctypes
+                ctypes.windll.gdi32.AddFontResourceW(font_path)
+                ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
+            except Exception as e:
+                print(f"Failed to load Space Grotesk font: {e}")
+
+    def setup_fredoka_font(self):
+        from ui.theme import get_asset_path
+        font_path = get_asset_path("assets/Fredoka.ttf")
+        if not os.path.exists(font_path):
+            try:
+                import urllib.request
+                # Fredoka Variable Font URL from Google Fonts raw GitHub repo
+                url = "https://github.com/google/fonts/raw/main/ofl/fredoka/Fredoka%5Bwdth%2Cwght%5D.ttf"
+                urllib.request.urlretrieve(url, font_path)
+            except Exception as e:
+                print(f"Failed to download Fredoka font: {e}")
+                
+        if os.path.exists(font_path):
+            try:
+                import ctypes
+                ctypes.windll.gdi32.AddFontResourceW(font_path)
+                ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
+            except Exception as e:
+                print(f"Failed to load Fredoka font: {e}")
+
+    def setup_oxanium_font(self):
+        from ui.theme import get_asset_path
+        font_path = get_asset_path("assets/Oxanium.ttf")
+        if not os.path.exists(font_path):
+            try:
+                import urllib.request
+                url = "https://github.com/google/fonts/raw/main/ofl/oxanium/Oxanium%5Bwght%5D.ttf"
+                urllib.request.urlretrieve(url, font_path)
+            except Exception as e:
+                print(f"Failed to download Oxanium font: {e}")
+                
+        if os.path.exists(font_path):
+            try:
+                import ctypes
+                ctypes.windll.gdi32.AddFontResourceW(font_path)
+                ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
+            except Exception as e:
+                print(f"Failed to load Oxanium font: {e}")
+
+    def setup_exo2_font(self):
+        from ui.theme import get_asset_path
+        font_path = get_asset_path("assets/Exo2.ttf")
+        if not os.path.exists(font_path):
+            try:
+                import urllib.request
+                # Exo 2 Variable Font URL from Google Fonts raw GitHub repo
+                url = "https://github.com/google/fonts/raw/main/ofl/exo2/Exo2%5Bwght%5D.ttf"
+                urllib.request.urlretrieve(url, font_path)
+            except Exception as e:
+                print(f"Failed to download Exo 2 font: {e}")
+                
+        if os.path.exists(font_path):
+            try:
+                import ctypes
+                ctypes.windll.gdi32.AddFontResourceW(font_path)
+                ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
+            except Exception as e:
+                print(f"Failed to load Exo 2 font: {e}")
+
+    def setup_cinzel_font(self):
+        from ui.theme import get_asset_path
+        font_path = get_asset_path("assets/Cinzel.ttf")
+        if not os.path.exists(font_path):
+            try:
+                import urllib.request
+                # Cinzel Variable Font URL from Google Fonts raw GitHub repo
+                url = "https://github.com/google/fonts/raw/main/ofl/cinzel/Cinzel%5Bwght%5D.ttf"
+                urllib.request.urlretrieve(url, font_path)
+            except Exception as e:
+                print(f"Failed to download Cinzel font: {e}")
+                
+        if os.path.exists(font_path):
+            try:
+                import ctypes
+                ctypes.windll.gdi32.AddFontResourceW(font_path)
+                ctypes.windll.user32.SendMessageW(0xFFFF, 0x1D, 0, 0)
+            except Exception as e:
+                print(f"Failed to load Cinzel font: {e}")
+
     def fallback_logo(self):
         self.logo_label = ctk.CTkLabel(
             self.sidebar_frame,
@@ -518,7 +716,319 @@ class LauncherWindow(ctk.CTk):
         from ui.theme import get_asset_path
         bg_path = get_asset_path("assets/background.png")
         bg_loaded = False
-        if os.path.exists(bg_path):
+        
+        saved_style = self.config_manager.get("launcher_style", "alien").lower()
+        if saved_style in ("matrix", "onyx", "eclipsex", "kitty", "shougun"):
+            # Canvas background for animations
+            is_light = self.config_manager.get("theme", "dark").lower() == "light"
+            if saved_style == "matrix":
+                bg_color = "#050505"
+            elif saved_style == "onyx":
+                bg_color = "#0B0B0D"
+            elif saved_style == "kitty":
+                bg_color = "#FFF5F8" if is_light else "#1E1218"
+            elif saved_style == "shougun":
+                bg_color = "#090909"
+            else:
+                bg_color = "#F8FAFC" if is_light else "#050506"
+                
+            self.matrix_canvas = tk.Canvas(home, bg=bg_color, highlightthickness=0)
+            self.matrix_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+            
+            if saved_style == "matrix":
+                # Setup columns for Matrix rain
+                self.matrix_columns = 55
+                self.matrix_font_size = 12
+                self.matrix_drops = [0] * self.matrix_columns
+                self.matrix_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@#$%^&*()_+{}[]<>?/\\"
+                
+                def draw_matrix_rain():
+                    if not hasattr(self, "matrix_canvas") or not self.matrix_canvas.winfo_exists():
+                        return
+                    self.matrix_canvas.delete("all")
+                    
+                    width = self.matrix_canvas.winfo_width()
+                    height = self.matrix_canvas.winfo_height()
+                    if width <= 1 or height <= 1:
+                        width = 880
+                        height = 650
+                    
+                    col_width = max(width // self.matrix_columns, 15)
+                    
+                    import random
+                    for i in range(len(self.matrix_drops)):
+                        char = random.choice(self.matrix_chars)
+                        x = i * col_width + 8
+                        y = self.matrix_drops[i] * self.matrix_font_size
+                        
+                        # Draw head
+                        self.matrix_canvas.create_text(x, y, text=char, fill="#39FF14", font=("Exo 2", self.matrix_font_size, "bold"))
+                        
+                        # Draw tail
+                        for tail in range(1, 12):
+                            tail_y = y - tail * self.matrix_font_size
+                            if tail_y > 0:
+                                # Fading greens
+                                if tail < 4:
+                                    color = "#7CFF00"
+                                elif tail < 8:
+                                    color = "#00AA00"
+                                else:
+                                    color = "#003300"
+                                tail_char = random.choice(self.matrix_chars)
+                                self.matrix_canvas.create_text(x, tail_y, text=tail_char, fill=color, font=("Exo 2", self.matrix_font_size))
+                                
+                        # Update drops
+                        if y > height and random.random() > 0.975:
+                            self.matrix_drops[i] = 0
+                        else:
+                            self.matrix_drops[i] += 1
+                            
+                    self.after(50, draw_matrix_rain)
+                    
+                self.after(100, draw_matrix_rain)
+            elif saved_style == "onyx":
+                # Setup particles for Onyx Starfield
+                self.onyx_particles = []
+                import random
+                colors = ["#8B5CF6", "#A855F7", "#C084FC", "#7C3AED", "#6D28D9"]
+                for _ in range(75):
+                    self.onyx_particles.append({
+                        "x": random.uniform(0, 880),
+                        "y": random.uniform(0, 650),
+                        "vx": random.uniform(-0.4, 0.4),
+                        "vy": random.uniform(-0.8, -0.2), # Move slowly upwards
+                        "r": random.uniform(1.0, 3.0),
+                        "color": random.choice(colors)
+                    })
+                    
+                def draw_onyx_stars():
+                    if not hasattr(self, "matrix_canvas") or not self.matrix_canvas.winfo_exists():
+                        return
+                    self.matrix_canvas.delete("all")
+                    
+                    width = self.matrix_canvas.winfo_width()
+                    height = self.matrix_canvas.winfo_height()
+                    if width <= 1 or height <= 1:
+                        width = 880
+                        height = 650
+                        
+                    for p in self.onyx_particles:
+                        p["x"] += p["vx"]
+                        p["y"] += p["vy"]
+                        
+                        # Wrap around
+                        if p["x"] < 0: p["x"] = width
+                        if p["x"] > width: p["x"] = 0
+                        if p["y"] < 0: p["y"] = height
+                        if p["y"] > height: p["y"] = 0
+                        
+                        x, y, r = p["x"], p["y"], p["r"]
+                        # Draw particle
+                        self.matrix_canvas.create_oval(
+                            x - r, y - r, x + r, y + r,
+                            fill=p["color"], outline=""
+                        )
+                        
+                        # Glow ring
+                        if r > 2.0:
+                            self.matrix_canvas.create_oval(
+                                x - r*2.0, y - r*2.0, x + r*2.0, y + r*2.0,
+                                outline=p["color"], width=1
+                            )
+                            
+                    self.after(40, draw_onyx_stars)
+                    
+                self.after(100, draw_onyx_stars)
+            elif saved_style == "kitty":
+                # Setup floating pawprints, hearts, stars, bubbles for Kitty
+                self.kitty_bubbles = []
+                import random
+                emojis = ["🐾", "🐾", "💗", "🌸", "⭐", "✨", "🎀", "🐈", "🍧", "🍡"]
+                for _ in range(25):
+                    self.kitty_bubbles.append({
+                        "x": random.uniform(0, 880),
+                        "y": random.uniform(200, 650),
+                        "vy": random.uniform(0.6, 1.5), # Drift upwards slowly
+                        "size": random.randint(14, 28),
+                        "char": random.choice(emojis)
+                    })
+                    
+                def draw_kitty_bubbles():
+                    if not hasattr(self, "matrix_canvas") or not self.matrix_canvas.winfo_exists():
+                        return
+                    self.matrix_canvas.delete("all")
+                    
+                    width = self.matrix_canvas.winfo_width()
+                    height = self.matrix_canvas.winfo_height()
+                    if width <= 1 or height <= 1:
+                        width = 880
+                        height = 650
+                        
+                    for b in self.kitty_bubbles:
+                        b["y"] -= b["vy"]
+                        # Float/sway horizontally a tiny bit
+                        import math
+                        import time
+                        b["x"] += math.sin(time.time() + b["size"]) * 0.2
+                        
+                        if b["y"] < -30:
+                            b["y"] = height + 30
+                            b["x"] = random.uniform(0, width)
+                            
+                        # Use glowing/pastel pink for emojis if in dark mode, or cute pink in light mode
+                        emoji_col = "#FF85C8" if not is_light else "#FF4F9F"
+                        self.matrix_canvas.create_text(
+                            b["x"], b["y"],
+                            text=b["char"],
+                            font=("Fredoka", b["size"]),
+                            fill=emoji_col
+                        )
+                        
+                    self.after(45, draw_kitty_bubbles)
+                    
+                self.after(100, draw_kitty_bubbles)
+            elif saved_style == "eclipsex":
+                # EclipseX constellations and shooting stars
+                self.eclipse_stars = []
+                import random
+                star_colors = ["#7C3AED", "#6366F1", "#A855F7"] if is_light else ["#7C3AED", "#A855F7", "#3B82F6"]
+                
+                for _ in range(35):
+                    self.eclipse_stars.append({
+                        "x": random.uniform(0, 880),
+                        "y": random.uniform(0, 650),
+                        "vx": random.uniform(-0.3, 0.3),
+                        "vy": random.uniform(-0.3, 0.3),
+                        "r": random.uniform(1.2, 2.8),
+                        "color": random.choice(star_colors)
+                    })
+                self.shooting_star = None
+                
+                def draw_eclipse_constellation():
+                    if not hasattr(self, "matrix_canvas") or not self.matrix_canvas.winfo_exists():
+                        return
+                    self.matrix_canvas.delete("all")
+                    
+                    width = self.matrix_canvas.winfo_width()
+                    height = self.matrix_canvas.winfo_height()
+                    if width <= 1 or height <= 1:
+                        width = 880
+                        height = 650
+                        
+                    is_light_mode = self.config_manager.get("theme", "dark").lower() == "light"
+                    line_col = "#E0E3EB" if is_light_mode else "#18122B"
+                    
+                    # Update and draw stars
+                    for p in self.eclipse_stars:
+                        p["x"] += p["vx"]
+                        p["y"] += p["vy"]
+                        
+                        if p["x"] < 0: p["x"] = width
+                        if p["x"] > width: p["x"] = 0
+                        if p["y"] < 0: p["y"] = height
+                        if p["y"] > height: p["y"] = 0
+                        
+                        x, y, r = p["x"], p["y"], p["r"]
+                        self.matrix_canvas.create_oval(
+                            x - r, y - r, x + r, y + r,
+                            fill=p["color"], outline=""
+                        )
+                        
+                    # Connecting constellation lines
+                    import math
+                    for i in range(len(self.eclipse_stars)):
+                        for j in range(i + 1, len(self.eclipse_stars)):
+                            dx = self.eclipse_stars[i]["x"] - self.eclipse_stars[j]["x"]
+                            dy = self.eclipse_stars[i]["y"] - self.eclipse_stars[j]["y"]
+                            dist = math.sqrt(dx*dx + dy*dy)
+                            if dist < 85:
+                                self.matrix_canvas.create_line(
+                                    self.eclipse_stars[i]["x"], self.eclipse_stars[i]["y"],
+                                    self.eclipse_stars[j]["x"], self.eclipse_stars[j]["y"],
+                                    fill=line_col, width=1
+                                )
+                                
+                    # Shooting star update
+                    import random
+                    if self.shooting_star is None:
+                        if random.random() > 0.992:
+                            self.shooting_star = {
+                                "x": random.uniform(0, width * 0.6),
+                                "y": 0,
+                                "vx": random.uniform(4.0, 7.0),
+                                "vy": random.uniform(3.0, 5.0),
+                                "length": random.uniform(40.0, 80.0),
+                                "color": random.choice(star_colors)
+                            }
+                    else:
+                        s = self.shooting_star
+                        s["x"] += s["vx"]
+                        s["y"] += s["vy"]
+                        
+                        self.matrix_canvas.create_line(
+                            s["x"] - s["length"], s["y"] - (s["length"] * s["vy"]/s["vx"]),
+                            s["x"], s["y"],
+                            fill=s["color"], width=2
+                        )
+                        
+                        if s["x"] > width or s["y"] > height:
+                            self.shooting_star = None
+                            
+                    self.after(45, draw_eclipse_constellation)
+                    
+                self.after(100, draw_eclipse_constellation)
+            elif saved_style == "shougun":
+                # Setup falling Sakura petals for Shougun
+                self.sakura_petals = []
+                import random
+                colors = ["#C1121F", "#E63946", "#D4AF37", "#FF5C77"]
+                for _ in range(45):
+                    self.sakura_petals.append({
+                        "x": random.uniform(0, 880),
+                        "y": random.uniform(-100, 650),
+                        "vy": random.uniform(0.7, 1.6), # Fall downwards
+                        "vx": random.uniform(-0.4, 0.4), # Drift sideways
+                        "size": random.uniform(3, 7),
+                        "color": random.choice(colors),
+                        "sway_speed": random.uniform(0.01, 0.03),
+                        "sway_offset": random.uniform(0, 100)
+                    })
+                    
+                def draw_sakura():
+                    if not hasattr(self, "matrix_canvas") or not self.matrix_canvas.winfo_exists():
+                        return
+                    self.matrix_canvas.delete("all")
+                    
+                    width = self.matrix_canvas.winfo_width()
+                    height = self.matrix_canvas.winfo_height()
+                    if width <= 1 or height <= 1:
+                        width = 880
+                        height = 650
+                        
+                    import math
+                    import time
+                    for p in self.sakura_petals:
+                        p["y"] += p["vy"]
+                        sway = math.sin(time.time() * 2 + p["sway_offset"]) * 0.4
+                        p["x"] += p["vx"] + sway
+                        
+                        if p["y"] > height + 20:
+                            p["y"] = -20
+                            p["x"] = random.uniform(0, width)
+                            
+                        x, y, r = p["x"], p["y"], p["size"]
+                        self.matrix_canvas.create_oval(
+                            x - r, y - r/2, x + r, y + r/2,
+                            fill=p["color"], outline=""
+                        )
+                        
+                    self.after(45, draw_sakura)
+                    
+                self.after(100, draw_sakura)
+                
+            bg_loaded = True
+        elif os.path.exists(bg_path):
             try:
                 pil_bg = Image.open(bg_path)
                 # Size matches our content frame width (1100-220 = 880) and height (650)
@@ -528,45 +1038,79 @@ class LauncherWindow(ctk.CTk):
                 bg_loaded = True
             except Exception as e:
                 print(f"Error loading background: {e}")
-
+ 
         if not bg_loaded:
             # Fallback flat color overlay
             self.bg_label = ctk.CTkLabel(home, text="", fg_color=APP_BG)
             self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
-
+ 
         # Overlap Main controls container on top of background
-        self.home_overlay = ctk.CTkFrame(home, fg_color="transparent")
-        self.home_overlay.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
-        self.home_overlay.grid_columnconfigure(0, weight=1)
-        self.home_overlay.grid_rowconfigure(0, weight=1) # Content spacer
-        self.home_overlay.grid_rowconfigure(1, weight=0) # Card area
-        self.home_overlay.grid_rowconfigure(2, weight=0) # Control bar
-
+        if saved_style in ("matrix", "onyx", "eclipsex", "kitty", "shougun"):
+            self.home_overlay = self.matrix_canvas
+            self.home_overlay.grid_columnconfigure(0, weight=1)
+            self.home_overlay.grid_rowconfigure(0, weight=1) # Content spacer
+            self.home_overlay.grid_rowconfigure(1, weight=0) # Card area
+            self.home_overlay.grid_rowconfigure(2, weight=0) # Control bar
+        else:
+            self.home_overlay = ctk.CTkFrame(home, fg_color="transparent")
+            self.home_overlay.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0)
+            self.home_overlay.grid_columnconfigure(0, weight=1)
+            self.home_overlay.grid_rowconfigure(0, weight=1) # Content spacer
+            self.home_overlay.grid_rowconfigure(1, weight=0) # Card area
+            self.home_overlay.grid_rowconfigure(2, weight=0) # Control bar
+ 
         # Top Title Banner
-        banner_frame = ctk.CTkFrame(self.home_overlay, fg_color="transparent")
-        banner_frame.grid(row=0, column=0, padx=30, pady=(40, 0), sticky="nw")
+        is_light_mode = self.config_manager.get("theme", "dark").lower() == "light"
+        if saved_style == "matrix":
+            banner_bg = "#050505"
+        elif saved_style == "onyx":
+            banner_bg = "#0B0B0D"
+        elif saved_style == "kitty":
+            banner_bg = "#FFF5F8" if is_light_mode else "#1E1218"
+        elif saved_style == "eclipsex":
+            banner_bg = "#F8FAFC" if is_light_mode else "#050506"
+        elif saved_style == "shougun":
+            banner_bg = "#090909"
+        else:
+            banner_bg = "transparent"
+            
+        self.banner_frame = ctk.CTkFrame(self.home_overlay, fg_color=banner_bg)
+        self.banner_frame.grid(row=0, column=0, padx=30, pady=(40, 0), sticky="nw")
         
         self.banner_title_label = ctk.CTkLabel(
-            banner_frame, text="Alien Launcher",
+            self.banner_frame, text="Alien Launcher",
             font=ctk.CTkFont(family="Orbitron", size=36, weight="bold"),
             text_color="#FFFFFF"
         )
         self.banner_title_label.pack(anchor="w")
         
-        banner_subtitle = ctk.CTkLabel(
-            banner_frame, text="Sleek, Secure, and Private Multiplayer launcher.",
+        self.banner_subtitle = ctk.CTkLabel(
+            self.banner_frame, text="Sleek, Secure, and Private Multiplayer launcher.",
             font=ctk.CTkFont(family="Orbitron", size=12),
             text_color="#A5D6A7"
         )
-        banner_subtitle.pack(anchor="w", pady=(5, 0))
-
+        self.banner_subtitle.pack(anchor="w", pady=(5, 0))
+ 
         # Horizontal Row of Status Cards
-        cards_row = ctk.CTkFrame(self.home_overlay, fg_color="transparent")
-        cards_row.grid(row=1, column=0, padx=30, pady=(0, 20), sticky="ew")
-        cards_row.grid_columnconfigure((0, 1, 2), weight=1, uniform="home_card")
+        is_light_mode = self.config_manager.get("theme", "dark").lower() == "light"
+        if saved_style == "matrix":
+            cards_bg = "#050505"
+        elif saved_style == "onyx":
+            cards_bg = "#0B0B0D"
+        elif saved_style == "kitty":
+            cards_bg = "#FFF5F8" if is_light_mode else "#1E1218"
+        elif saved_style == "eclipsex":
+            cards_bg = "#F8FAFC" if is_light_mode else "#050506"
+        elif saved_style == "shougun":
+            cards_bg = "#090909"
+        else:
+            cards_bg = "transparent"
+        self.cards_row = ctk.CTkFrame(self.home_overlay, fg_color=cards_bg)
+        self.cards_row.grid(row=1, column=0, padx=30, pady=(0, 20), sticky="ew")
+        self.cards_row.grid_columnconfigure((0, 1, 2), weight=1, uniform="home_card")
 
         # Card 1: Account Info
-        self.card_acc = ctk.CTkFrame(cards_row, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
+        self.card_acc = ctk.CTkFrame(self.cards_row, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
         self.card_acc.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
         
         lbl_acc_title = ctk.CTkLabel(self.card_acc, text="ACCOUNT PROFILE", font=ctk.CTkFont(size=10, weight="bold"), text_color=TEXT_MUTED)
@@ -575,7 +1119,7 @@ class LauncherWindow(ctk.CTk):
         self.lbl_acc_val.pack(padx=15, pady=(0, 15), anchor="w")
 
         # Card 2: Settings Preview (RAM)
-        self.card_settings = ctk.CTkFrame(cards_row, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
+        self.card_settings = ctk.CTkFrame(self.cards_row, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
         self.card_settings.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
         
         lbl_sett_title = ctk.CTkLabel(self.card_settings, text="RAM ALLOCATION", font=ctk.CTkFont(size=10, weight="bold"), text_color=TEXT_MUTED)
@@ -584,7 +1128,7 @@ class LauncherWindow(ctk.CTk):
         self.lbl_sett_val.pack(padx=15, pady=(0, 15), anchor="w")
 
         # Card 3: VPN Status Preview
-        self.card_vpn = ctk.CTkFrame(cards_row, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
+        self.card_vpn = ctk.CTkFrame(self.cards_row, fg_color=SURFACE_ALT, border_width=1, border_color=CARD_BORDER)
         self.card_vpn.grid(row=0, column=2, padx=10, pady=10, sticky="nsew")
         
         lbl_vpn_title = ctk.CTkLabel(self.card_vpn, text="TAILSCALE VPN", font=ctk.CTkFont(size=10, weight="bold"), text_color=TEXT_MUTED)

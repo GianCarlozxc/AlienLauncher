@@ -1,5 +1,5 @@
 {
-    "version": "1.3.4",
-    "changelog": "feat: Add mod image support to downloaded mods list",
+    "version": "1.5.5",
+    "changelog": "Hide controls and show only Download TS and Log in buttons when not connected or not installed",
     "download_url": "C:\\Users\\Administrator\\Desktop\\Minecraft Launcher\\dist\\Alien Launcher.exe"
 }

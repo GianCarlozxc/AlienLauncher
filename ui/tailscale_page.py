@@ -77,38 +77,38 @@ class TailscalePage(ctk.CTkFrame):
         actions_frame = ctk.CTkFrame(self, fg_color="#1A1A1A", border_width=1, border_color="#2A2A2A")
         actions_frame.grid(row=3, column=0, padx=20, pady=15, sticky="ew")
         
-        actions_title = ctk.CTkLabel(actions_frame, text="Quick Actions", font=ctk.CTkFont(weight="bold", size=14))
+        actions_title = ctk.CTkLabel(actions_frame, text="⚡ Quick Actions", font=ctk.CTkFont(weight="bold", size=14))
         actions_title.pack(padx=15, pady=(10, 5), anchor="w")
 
         self.buttons_container = ctk.CTkFrame(actions_frame, fg_color="transparent")
         self.buttons_container.pack(padx=15, pady=(0, 10), fill="x")
 
         self.btn_up = ctk.CTkButton(
-            self.buttons_container, text="Tailscale Up", 
+            self.buttons_container, text="⚡ Connect", 
             fg_color=ui.theme.ACCENT_COLOR, hover_color=ui.theme.ACCENT_HOVER_COLOR, text_color=ui.theme.ACCENT_TEXT_COLOR,
             font=ctk.CTkFont(weight="bold"), command=self.action_up
         )
 
         self.btn_down = ctk.CTkButton(
-            self.buttons_container, text="Tailscale Down", 
+            self.buttons_container, text="🔌 Disconnect", 
             fg_color="#C0392B", hover_color="#962D22", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"), command=self.action_down
         )
 
         self.btn_login_logout = ctk.CTkButton(
-            self.buttons_container, text="Log in", 
+            self.buttons_container, text="🔑 Log in", 
             fg_color="#2980B9", hover_color="#1F618D", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"), command=self.action_login_logout
         )
 
         self.btn_status = ctk.CTkButton(
-            self.buttons_container, text="Check Status", 
+            self.buttons_container, text="🔍 Check Status", 
             fg_color="#2C2C2C", hover_color="#3A3A3A", text_color="#FFFFFF",
             command=self.action_status
         )
 
         self.btn_download = ctk.CTkButton(
-            self.buttons_container, text="Download TS", 
+            self.buttons_container, text="📥 Download TS", 
             fg_color="#3498DB", hover_color="#2980B9", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"),
             command=self.action_download_tailscale
@@ -173,7 +173,7 @@ class TailscalePage(ctk.CTkFrame):
                 
                 # Update login/logout button to Logout state (red)
                 self.btn_login_logout.configure(
-                    text="Logout",
+                    text="🚪 Logout",
                     fg_color="#C0392B",
                     hover_color="#962D22",
                     text_color="#FFFFFF",
@@ -194,7 +194,7 @@ class TailscalePage(ctk.CTkFrame):
                 
                 # Update login/logout button to Log in state (blue)
                 self.btn_login_logout.configure(
-                    text="Log in",
+                    text="🔑 Log in",
                     fg_color="#2980B9",
                     hover_color="#1F618D",
                     text_color="#FFFFFF",
@@ -210,7 +210,7 @@ class TailscalePage(ctk.CTkFrame):
             
             # Disable login/logout button since Tailscale is not installed
             self.btn_login_logout.configure(
-                text="Log in",
+                text="🔑 Log in",
                 fg_color="#2980B9",
                 hover_color="#1F618D",
                 text_color="#FFFFFF",
@@ -457,7 +457,7 @@ class TailscalePage(ctk.CTkFrame):
                 self.run_in_gui(self._update_log, f"Failed to download or run installer: {str(e)}\n")
             finally:
                 def _reset_btn():
-                    self.btn_download.configure(state="normal", text="Download TS")
+                    self.btn_download.configure(state="normal", text="📥 Download TS")
                     self.refresh_status()
                 self.run_in_gui(_reset_btn)
 

@@ -52,7 +52,8 @@ try:
             
             if res.content:
                 prefix = res.content[:200].strip().lower()
-                if prefix.startswith(b'<!doctype html') or prefix.startswith(b'<html') or b'fortiguard' in prefix or b'blocked' in prefix:
+                is_expected_html = "ely.by/skins" in url
+                if not is_expected_html and (prefix.startswith(b'<!doctype html') or prefix.startswith(b'<html') or b'fortiguard' in prefix or b'blocked' in prefix):
                     raise Exception("Network block detected")
             return res
         except Exception as e:

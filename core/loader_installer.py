@@ -417,6 +417,17 @@ def install_forge(game_version, loader_version, mc_dir, java_path="java", status
                     if client_val.startswith('[') and client_val.endswith(']'):
                         lib_name = client_val[1:-1]
                         resolved = os.path.join(libraries_dir, maven_to_path(lib_name).replace('/', os.sep))
+                    elif client_val.startswith('/'):
+                        # It's a path inside the installer ZIP! E.g. /data/client.lzma
+                        zip_entry = client_val.lstrip('/')
+                        extracted_path = os.path.join(temp_dir, zip_entry.replace('/', os.sep))
+                        os.makedirs(os.path.dirname(extracted_path), exist_ok=True)
+                        try:
+                            with open(extracted_path, "wb") as out_f:
+                                out_f.write(z.read(zip_entry))
+                        except Exception:
+                            pass
+                        resolved = extracted_path
                     else:
                         resolved = client_val
                     argument_vars[f"{{{key}}}"] = resolved

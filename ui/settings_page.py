@@ -603,7 +603,7 @@ class SettingsPage(ctk.CTkFrame):
             hover_color=CONTROL_HOVER,
             text_color=TEXT_PRIMARY,
             font=ctk.CTkFont(weight="bold"),
-            command=lambda: self.open_selector_dialog("Select Launcher Style", ["Alien Launcher", "Unicorn Launcher"], self.launcher_style_var, self.change_launcher_style)
+            command=lambda: self.open_selector_dialog("Select Launcher Style", ["Alien Launcher", "Unicorn Launcher", "Onyx Launcher", "Kitty Launcher", "EclipseX Launcher", "Matrix Launcher", "Shougun Launcher"], self.launcher_style_var, self.change_launcher_style)
         )
         self.style_btn.grid(row=0, column=1, rowspan=2, sticky="e", padx=(10, 0))
 
@@ -771,8 +771,21 @@ class SettingsPage(ctk.CTkFrame):
         self.theme_var.set(saved_theme.capitalize())
         
         # Load Launcher Style
-        saved_style = self.config_manager.get("launcher_style", "alien")
-        self.launcher_style_var.set("Unicorn Launcher" if saved_style == "unicorn" else "Alien Launcher")
+        saved_style = self.config_manager.get("launcher_style", "alien").lower()
+        if saved_style == "unicorn":
+            self.launcher_style_var.set("Unicorn Launcher")
+        elif saved_style == "onyx":
+            self.launcher_style_var.set("Onyx Launcher")
+        elif saved_style == "kitty":
+            self.launcher_style_var.set("Kitty Launcher")
+        elif saved_style == "eclipsex":
+            self.launcher_style_var.set("EclipseX Launcher")
+        elif saved_style == "matrix":
+            self.launcher_style_var.set("Matrix Launcher")
+        elif saved_style == "shougun":
+            self.launcher_style_var.set("Shougun Launcher")
+        else:
+            self.launcher_style_var.set("Alien Launcher")
         
         # Load Update Check setting
         enabled = self.config_manager.get("enable_update_check", False)
@@ -895,7 +908,21 @@ class SettingsPage(ctk.CTkFrame):
             self.java_var.set(selected)
 
     def change_launcher_style(self, val):
-        style = "unicorn" if "unicorn" in val.lower() else "alien"
+        val_lower = val.lower()
+        if "unicorn" in val_lower:
+            style = "unicorn"
+        elif "onyx" in val_lower:
+            style = "onyx"
+        elif "kitty" in val_lower:
+            style = "kitty"
+        elif "eclipsex" in val_lower:
+            style = "eclipsex"
+        elif "matrix" in val_lower:
+            style = "matrix"
+        elif "shougun" in val_lower:
+            style = "shougun"
+        else:
+            style = "alien"
         
         # Save style immediately to config
         self.config_manager.set("launcher_style", style)
@@ -960,7 +987,19 @@ class SettingsPage(ctk.CTkFrame):
         ram_max = self.ram_max_var.get()
 
         theme = self.theme_var.get().lower()
-        launcher_style = "unicorn" if "unicorn" in self.launcher_style_var.get().lower() else "alien"
+        style_val = self.launcher_style_var.get().lower()
+        if "unicorn" in style_val:
+            launcher_style = "unicorn"
+        elif "onyx" in style_val:
+            launcher_style = "onyx"
+        elif "kitty" in style_val:
+            launcher_style = "kitty"
+        elif "eclipsex" in style_val:
+            launcher_style = "eclipsex"
+        elif "matrix" in style_val:
+            launcher_style = "matrix"
+        else:
+            launcher_style = "alien"
 
         # Write to config
         self.config_manager.set("username", username)
@@ -1200,7 +1239,20 @@ class SettingsPage(ctk.CTkFrame):
                     # Update sidebar credit label on parent window
                     if hasattr(self, "toplevel") and self.toplevel and hasattr(self.toplevel, "credit_label") and self.toplevel.credit_label:
                         saved_style = self.config_manager.get("launcher_style", "alien").lower()
-                        title = "Unicorn Launcher" if saved_style == "unicorn" else "Alien Launcher"
+                        if saved_style == "unicorn":
+                            title = "Unicorn Launcher"
+                        elif saved_style == "onyx":
+                            title = "Onyx Launcher"
+                        elif saved_style == "kitty":
+                            title = "Kitty Launcher"
+                        elif saved_style == "eclipsex":
+                            title = "EclipseX Launcher"
+                        elif saved_style == "matrix":
+                            title = "Matrix Launcher"
+                        elif saved_style == "shougun":
+                            title = "Shougun Launcher"
+                        else:
+                            title = "Alien Launcher"
                         self.toplevel.credit_label.configure(text=f"{title} v{version}")
 
                     messagebox.showinfo("Update Complete", f"Launcher has been updated to v{version} successfully! UI refreshed.")

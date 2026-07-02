@@ -108,6 +108,151 @@ def set_theme(theme_name):
         update_list(TEXT_DISABLED, ["#333333", "#A84C8F"])
         update_list(SUCCESS_COLOR, ["#000000", "#FF66CC"]) # Black in light mode, pink in dark mode
         update_list(HIGHLIGHT_COLOR, ["#FFC2E3", "#FF66CC"]) # Light pink in light mode, bright pink in dark mode
+    elif theme_name == "onyx":
+        # Onyx theme colors (dark onyx black, graphite, purple/violet)
+        ACCENT = "#8B5CF6"
+        ACCENT_HOVER = "#A855F7"
+        ACCENT_TEXT = "#F5F5F5"
+        
+        update_list(ACCENT_COLOR, [ACCENT, ACCENT])
+        update_list(ACCENT_HOVER_COLOR, [ACCENT_HOVER, ACCENT_HOVER])
+        update_list(ACCENT_TEXT_COLOR, [ACCENT_TEXT, ACCENT_TEXT])
+        
+        update_list(APP_BG, ["#0B0B0D", "#0B0B0D"])
+        update_list(SIDEBAR_BG, ["#1A1C22", "#1A1C22"])
+        update_list(SURFACE, ["#1A1C22", "#1A1C22"])
+        update_list(SURFACE_ALT, ["#0B0B0D", "#0B0B0D"])
+        update_list(SURFACE_HOVER, ["#2D3139", "#2D3139"])
+        update_list(CONTROL_BG, ["#1A1C22", "#1A1C22"])
+        update_list(CONTROL_HOVER, ["#2D3139", "#2D3139"])
+        update_list(SECONDARY_BUTTON, ["#1A1C22", "#1A1C22"])
+        update_list(SECONDARY_HOVER, ["#2D3139", "#2D3139"])
+        update_list(BORDER, ["#2D3139", "#2D3139"])
+        update_list(BORDER_DARK, ["#2D3139", "#2D3139"])
+        update_list(CARD_BORDER, ["#2D3139", "#2D3139"])
+        
+        update_list(TEXT_PRIMARY, ["#F5F5F5", "#F5F5F5"])
+        update_list(TEXT_SECONDARY, ["#9CA3AF", "#9CA3AF"])
+        update_list(TEXT_MUTED, ["#9CA3AF", "#9CA3AF"])
+        update_list(TEXT_DISABLED, ["#4B5563", "#4B5563"])
+        update_list(SUCCESS_COLOR, ["#8B5CF6", "#8B5CF6"])
+        update_list(HIGHLIGHT_COLOR, ["#A855F7", "#A855F7"])
+    elif theme_name == "kitty":
+        # Kitty theme colors (pink, soft gray, mint green, Fredoka font)
+        ACCENT = "#FF4F9F"
+        ACCENT_HOVER = "#FF85C8"
+        ACCENT_TEXT = "#000000"
+        
+        update_list(ACCENT_COLOR, [ACCENT, ACCENT])
+        update_list(ACCENT_HOVER_COLOR, [ACCENT_HOVER, ACCENT_HOVER])
+        update_list(ACCENT_TEXT_COLOR, [ACCENT_TEXT, ACCENT_TEXT])
+        
+        update_list(APP_BG, ["#FFF5F8", "#1E1218"])
+        update_list(SIDEBAR_BG, ["#FFE8F0", "#180E13"])
+        update_list(SURFACE, ["#FFFFFF", "#281920"])
+        update_list(SURFACE_ALT, ["#FFFafc", "#1A0F15"])
+        update_list(SURFACE_HOVER, ["#FFD3E3", "#38232D"])
+        update_list(CONTROL_BG, ["#FFF0F5", "#20141A"])
+        update_list(CONTROL_HOVER, ["#FFD6E8", "#301E27"])
+        update_list(SECONDARY_BUTTON, ["#FFE0ED", "#2E1C25"])
+        update_list(SECONDARY_HOVER, ["#FFC2DB", "#3E2532"])
+        update_list(BORDER, ["#FFC7E0", "#4A2F3D"])
+        update_list(BORDER_DARK, ["#FFA6CC", "#5A394B"])
+        update_list(CARD_BORDER, ["#FFC7E0", "#4A2F3D"])
+        
+        update_list(TEXT_PRIMARY, ["#000000", "#FF4F9F"])
+        update_list(TEXT_SECONDARY, ["#4B5563", "#D1D5DB"])
+        update_list(TEXT_MUTED, ["#71717A", "#9CA3AF"])
+        update_list(TEXT_DISABLED, ["#9CA3AF", "#4B5563"])
+        update_list(SUCCESS_COLOR, ["#4ADE80", "#4ADE80"])
+        update_list(HIGHLIGHT_COLOR, ["#FFC2DB", "#FF4F9F"])
+    elif theme_name == "eclipsex":
+        # EclipseX theme colors (Eclipse Black, Space Gray, Cosmic Purple, Neon Violet, Silver, Cool Gray, White)
+        ACCENT = "#7C3AED"
+        ACCENT_HOVER = "#A855F7"
+        ACCENT_TEXT = "#FFFFFF"
+        
+        update_list(ACCENT_COLOR, [ACCENT, ACCENT])
+        update_list(ACCENT_HOVER_COLOR, [ACCENT_HOVER, ACCENT_HOVER])
+        update_list(ACCENT_TEXT_COLOR, ["#FFFFFF", "#E5E7EB"])
+        
+        update_list(APP_BG, ["#F8FAFC", "#050506"])
+        update_list(SIDEBAR_BG, ["#F1F5F9", "#111218"])
+        update_list(SURFACE, ["#FFFFFF", "#111218"])
+        update_list(SURFACE_ALT, ["#F8FAFC", "#050506"])
+        update_list(SURFACE_HOVER, ["#E2E8F0", "#1C1E26"])
+        update_list(CONTROL_BG, ["#F1F5F9", "#111218"])
+        update_list(CONTROL_HOVER, ["#E2E8F0", "#1C1E26"])
+        update_list(SECONDARY_BUTTON, ["#6366F1", "#3B82F6"])
+        update_list(SECONDARY_HOVER, ["#4F46E5", "#2563EB"])
+        update_list(BORDER, ["#DCE3EC", "#1C1E26"])
+        update_list(BORDER_DARK, ["#DCE3EC", "#1C1E26"])
+        update_list(CARD_BORDER, ["#DCE3EC", "#1C1E26"])
+        
+        update_list(TEXT_PRIMARY, ["#111827", "#E5E7EB"])
+        update_list(TEXT_SECONDARY, ["#6B7280", "#A1A1AA"])
+        update_list(TEXT_MUTED, ["#6B7280", "#A1A1AA"])
+        update_list(TEXT_DISABLED, ["#9CA3AF", "#4B5563"])
+        update_list(SUCCESS_COLOR, ["#7C3AED", "#7C3AED"])
+        update_list(HIGHLIGHT_COLOR, ["#A855F7", "#FFFFFF"])
+    elif theme_name == "matrix":
+        # Matrix theme colors (Jet Black background, Carbon Gray secondary background, Matrix Green primary accent, Neon Green glow, Lime Green secondary accent, White primary text, Gray secondary text, Silver metallic)
+        ACCENT = "#7CFF00"
+        ACCENT_HOVER = "#39FF14"
+        ACCENT_TEXT = "#050505"
+        
+        update_list(ACCENT_COLOR, [ACCENT, ACCENT])
+        update_list(ACCENT_HOVER_COLOR, [ACCENT_HOVER, ACCENT_HOVER])
+        update_list(ACCENT_TEXT_COLOR, [ACCENT_TEXT, ACCENT_TEXT])
+        
+        update_list(APP_BG, ["#050505", "#050505"])
+        update_list(SIDEBAR_BG, ["#121212", "#121212"])
+        update_list(SURFACE, ["#121212", "#121212"])
+        update_list(SURFACE_ALT, ["#050505", "#050505"])
+        update_list(SURFACE_HOVER, ["#1D1D1D", "#1D1D1D"])
+        update_list(CONTROL_BG, ["#121212", "#121212"])
+        update_list(CONTROL_HOVER, ["#1D1D1D", "#1D1D1D"])
+        update_list(SECONDARY_BUTTON, ["#A3FF12", "#A3FF12"])
+        update_list(SECONDARY_HOVER, ["#7CFF00", "#7CFF00"])
+        update_list(BORDER, ["#2D2D2D", "#2D2D2D"])
+        update_list(BORDER_DARK, ["#2D2D2D", "#2D2D2D"])
+        update_list(CARD_BORDER, ["#2D2D2D", "#2D2D2D"])
+        
+        update_list(TEXT_PRIMARY, ["#FFFFFF", "#FFFFFF"])
+        update_list(TEXT_SECONDARY, ["#B0B3C0", "#B0B3C0"])
+        update_list(TEXT_MUTED, ["#B0B3C0", "#B0B3C0"])
+        update_list(TEXT_DISABLED, ["#4B5563", "#4B5563"])
+        update_list(SUCCESS_COLOR, ["#7CFF00", "#7CFF00"])
+        update_list(HIGHLIGHT_COLOR, ["#39FF14", "#39FF14"])
+    elif theme_name == "shougun":
+        # Shougun theme colors (Obsidian Black, Charcoal, Gunmetal Card, Crimson Red, Samurai Gold, Blood Red, White, Silver Gray)
+        ACCENT = "#C1121F"
+        ACCENT_HOVER = "#E63946"
+        ACCENT_TEXT = "#F8F8F8"
+        
+        update_list(ACCENT_COLOR, [ACCENT, ACCENT])
+        update_list(ACCENT_HOVER_COLOR, [ACCENT_HOVER, ACCENT_HOVER])
+        update_list(ACCENT_TEXT_COLOR, [ACCENT_TEXT, ACCENT_TEXT])
+        
+        update_list(APP_BG, ["#090909", "#090909"])
+        update_list(SIDEBAR_BG, ["#1A1A1D", "#1A1A1D"])
+        update_list(SURFACE, ["#23252B", "#23252B"])
+        update_list(SURFACE_ALT, ["#1A1A1D", "#1A1A1D"])
+        update_list(SURFACE_HOVER, ["#2D3038", "#2D3038"])
+        update_list(CONTROL_BG, ["#23252B", "#23252B"])
+        update_list(CONTROL_HOVER, ["#2D3038", "#2D3038"])
+        update_list(SECONDARY_BUTTON, ["#D4AF37", "#D4AF37"])
+        update_list(SECONDARY_HOVER, ["#B8962D", "#B8962D"])
+        update_list(BORDER, ["#2D2D2D", "#2D2D2D"])
+        update_list(BORDER_DARK, ["#1A1A1D", "#1A1A1D"])
+        update_list(CARD_BORDER, ["#D4AF37", "#D4AF37"])
+        
+        update_list(TEXT_PRIMARY, ["#F8F8F8", "#F8F8F8"])
+        update_list(TEXT_SECONDARY, ["#B8BCC5", "#B8BCC5"])
+        update_list(TEXT_MUTED, ["#B8BCC5", "#B8BCC5"])
+        update_list(TEXT_DISABLED, ["#4B5563", "#4B5563"])
+        update_list(SUCCESS_COLOR, ["#C1121F", "#C1121F"])
+        update_list(HIGHLIGHT_COLOR, ["#E63946", "#E63946"])
     else:
         # Default green theme colors
         ACCENT = "#2ECC71"
@@ -163,6 +308,18 @@ original_init = ctk.CTkFont.__init__
 def new_init(self, *args, **kwargs):
     if CURRENT_THEME == "unicorn":
         kwargs["family"] = "Chewy"
+    elif CURRENT_THEME == "onyx":
+        kwargs["family"] = "Space Grotesk"
+    elif CURRENT_THEME == "kitty":
+        kwargs["family"] = "Fredoka"
+    elif CURRENT_THEME == "eclipsex":
+        kwargs["family"] = "Oxanium"
+    elif CURRENT_THEME == "matrix":
+        kwargs["family"] = "Exo 2"
+        kwargs["weight"] = "bold"
+    elif CURRENT_THEME == "shougun":
+        kwargs["family"] = "Cinzel"
+        kwargs["weight"] = "bold"
     original_init(self, *args, **kwargs)
 ctk.CTkFont.__init__ = new_init
 
@@ -170,6 +327,16 @@ original_configure = ctk.CTkFont.configure
 def new_configure(self, *args, **kwargs):
     if CURRENT_THEME == "unicorn" and "family" in kwargs:
         kwargs["family"] = "Chewy"
+    elif CURRENT_THEME == "onyx" and "family" in kwargs:
+        kwargs["family"] = "Space Grotesk"
+    elif CURRENT_THEME == "kitty" and "family" in kwargs:
+        kwargs["family"] = "Fredoka"
+    elif CURRENT_THEME == "eclipsex" and "family" in kwargs:
+        kwargs["family"] = "Oxanium"
+    elif CURRENT_THEME == "matrix" and "family" in kwargs:
+        kwargs["family"] = "Exo 2"
+    elif CURRENT_THEME == "shougun" and "family" in kwargs:
+        kwargs["family"] = "Cinzel"
     return original_configure(self, *args, **kwargs)
 ctk.CTkFont.configure = new_configure
 

@@ -276,7 +276,7 @@ class SkinPage(ctk.CTkFrame):
                 text="No Ely.by skins found.",
                 font=ctk.CTkFont(size=13, weight="bold"),
                 text_color=TEXT_PRIMARY
-            ).grid(row=0, column=0, padx=15, pady=30)
+            ).grid(row=0, column=0, columnspan=4, padx=15, pady=30)
 
         for idx, skin in enumerate(skins, start=start_index):
             self.add_skin_card(skin, idx)
@@ -306,7 +306,7 @@ class SkinPage(ctk.CTkFrame):
                 text_color=TEXT_PRIMARY,
                 wraplength=600,
                 justify="left"
-            ).grid(row=0, column=0, padx=15, pady=30, sticky="nw")
+            ).grid(row=0, column=0, columnspan=4, padx=15, pady=30, sticky="nw")
         except Exception:
             pass
 
@@ -326,7 +326,7 @@ class SkinPage(ctk.CTkFrame):
                 text="No saved skins found.",
                 font=ctk.CTkFont(size=13, weight="bold"),
                 text_color=TEXT_PRIMARY
-            ).grid(row=0, column=0, padx=15, pady=30)
+            ).grid(row=0, column=0, columnspan=4, padx=15, pady=30)
 
         for idx, skin in enumerate(skins):
             self.add_skin_card(skin, idx, is_saved_view=True)
