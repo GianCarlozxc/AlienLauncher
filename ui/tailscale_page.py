@@ -113,7 +113,7 @@ class TailscalePage(ctk.CTkFrame):
 
 
         self.btn_download = ctk.CTkButton(
-            buttons_container, text="Download Tailscale", 
+            buttons_container, text="Download TS", 
             fg_color="#3498DB", hover_color="#2980B9", text_color="#FFFFFF",
             font=ctk.CTkFont(weight="bold"),
             command=self.action_download_tailscale
@@ -432,7 +432,7 @@ class TailscalePage(ctk.CTkFrame):
                 self.run_in_gui(self._update_log, f"Failed to download or run installer: {str(e)}\n")
             finally:
                 def _reset_btn():
-                    self.btn_download.configure(state="normal", text="Download Tailscale")
+                    self.btn_download.configure(state="normal", text="Download TS")
                     self.refresh_status()
                 self.run_in_gui(_reset_btn)
 
