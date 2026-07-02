@@ -253,12 +253,19 @@ def main():
 
     try:
         # Clean up any leftover .old executable from in-place updates
-        try:
+        def cleanup_old_exe():
+            import time
             old_exe = sys.executable + ".old"
-            if os.path.exists(old_exe):
-                os.remove(old_exe)
-        except Exception:
-            pass
+            for _ in range(10): # Retry up to 10 times (10 seconds total)
+                try:
+                    if os.path.exists(old_exe):
+                        os.remove(old_exe)
+                    break
+                except Exception:
+                    time.sleep(1)
+        
+        import threading
+        threading.Thread(target=cleanup_old_exe, daemon=True).start()
 
         # Ensure our assets directory exists
         if not os.path.exists("assets"):
